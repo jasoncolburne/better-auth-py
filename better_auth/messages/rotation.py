@@ -34,11 +34,7 @@ class RotateAuthenticationKeyRequest(ClientRequest[Dict[str, Any]]):
         signature: Optional cryptographic signature.
     """
 
-    def __init__(
-        self,
-        request: Dict[str, Any],
-        nonce: str
-    ) -> None:
+    def __init__(self, request: Dict[str, Any], nonce: str) -> None:
         """Initialize a rotate authentication key request.
 
         Args:
@@ -78,12 +74,7 @@ class RotateAuthenticationKeyResponse(ServerResponse[Dict[str, Any]]):
         signature: Optional cryptographic signature.
     """
 
-    def __init__(
-        self,
-        response: Dict[str, Any],
-        response_key_hash: str,
-        nonce: str
-    ) -> None:
+    def __init__(self, response: Dict[str, Any], response_key_hash: str, nonce: str) -> None:
         """Initialize a rotate authentication key response.
 
         Args:

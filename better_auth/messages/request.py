@@ -7,13 +7,13 @@ requests with access control information (nonce) and signature support.
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Dict, Generic, Optional, Type, TypeVar
+from typing import Any, Callable, Dict, Generic, TypeVar
 
 from better_auth.messages.message import SignableMessage
 
 
 # Type variable for the request payload type
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class ClientRequest(SignableMessage, Generic[T]):
@@ -57,10 +57,7 @@ class ClientRequest(SignableMessage, Generic[T]):
         }
 
     @staticmethod
-    def _parse(
-        message: str,
-        constructor: Callable[[Any, str], T]
-    ) -> T:
+    def _parse(message: str, constructor: Callable[[Any, str], T]) -> T:
         """Parse a serialized client request message.
 
         This is an internal method used by subclasses to implement their

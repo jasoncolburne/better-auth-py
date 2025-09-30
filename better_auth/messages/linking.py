@@ -36,10 +36,7 @@ class LinkContainer(SignableMessage):
         signature: Optional cryptographic signature from an existing device.
     """
 
-    def __init__(
-        self,
-        payload: Dict[str, Dict[str, str]]
-    ) -> None:
+    def __init__(self, payload: Dict[str, Dict[str, str]]) -> None:
         """Initialize a link container.
 
         Args:
@@ -62,7 +59,7 @@ class LinkContainer(SignableMessage):
         if self.payload is None:
             raise RuntimeError("payload not defined")
 
-        return json.dumps(self.payload, separators=(',', ':'), sort_keys=False)
+        return json.dumps(self.payload, separators=(",", ":"), sort_keys=False)
 
     @staticmethod
     def parse(message: str) -> LinkContainer:
@@ -114,11 +111,7 @@ class LinkDeviceRequest(ClientRequest[Dict[str, Any]]):
         signature: Optional cryptographic signature.
     """
 
-    def __init__(
-        self,
-        request: Dict[str, Any],
-        nonce: str
-    ) -> None:
+    def __init__(self, request: Dict[str, Any], nonce: str) -> None:
         """Initialize a link device request.
 
         Args:
@@ -157,12 +150,7 @@ class LinkDeviceResponse(ServerResponse[Dict[str, Any]]):
         signature: Optional cryptographic signature.
     """
 
-    def __init__(
-        self,
-        response: Dict[str, Any],
-        response_key_hash: str,
-        nonce: str
-    ) -> None:
+    def __init__(self, response: Dict[str, Any], response_key_hash: str, nonce: str) -> None:
         """Initialize a link device response.
 
         Args:

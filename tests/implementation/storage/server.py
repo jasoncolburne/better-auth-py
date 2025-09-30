@@ -82,9 +82,7 @@ class ServerAuthenticationKeyStore(IServerAuthenticationKeyStore):
         self._identities.add(identity)
         self._data_by_token[token] = (public_key, rotation_hash)
 
-    async def rotate(
-        self, identity: str, device: str, current: str, rotation_hash: str
-    ) -> None:
+    async def rotate(self, identity: str, device: str, current: str, rotation_hash: str) -> None:
         """Rotate a key for an identity and device.
 
         Validates that the current public key matches the hash of the previously

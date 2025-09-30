@@ -28,7 +28,7 @@ class Base64:
             A URL-safe base64 encoded string.
         """
         # Use urlsafe_b64encode which automatically does the replacement
-        encoded = base64.urlsafe_b64encode(data).decode('ascii')
+        encoded = base64.urlsafe_b64encode(data).decode("ascii")
         return encoded
 
     @staticmethod

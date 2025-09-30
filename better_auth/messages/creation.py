@@ -35,11 +35,7 @@ class CreationRequest(ClientRequest[Dict[str, Any]]):
         signature: Optional cryptographic signature.
     """
 
-    def __init__(
-        self,
-        request: Dict[str, Any],
-        nonce: str
-    ) -> None:
+    def __init__(self, request: Dict[str, Any], nonce: str) -> None:
         """Initialize a creation request.
 
         Args:
@@ -78,12 +74,7 @@ class CreationResponse(ServerResponse[Dict[str, Any]]):
         signature: Optional cryptographic signature.
     """
 
-    def __init__(
-        self,
-        response: Dict[str, Any],
-        response_key_hash: str,
-        nonce: str
-    ) -> None:
+    def __init__(self, response: Dict[str, Any], response_key_hash: str, nonce: str) -> None:
         """Initialize a creation response.
 
         Args:

@@ -17,7 +17,7 @@ from better_auth.messages.message import SignableMessage
 
 
 # Type variable for generic attributes
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class AccessToken(SignableMessage, Generic[T]):
@@ -55,7 +55,7 @@ class AccessToken(SignableMessage, Generic[T]):
         issued_at: str,
         expiry: str,
         refresh_expiry: str,
-        attributes: T
+        attributes: T,
     ) -> None:
         """Initialize an access token.
 
@@ -79,9 +79,7 @@ class AccessToken(SignableMessage, Generic[T]):
 
     @staticmethod
     async def parse(
-        message: str,
-        public_key_length: int,
-        token_encoder: ITokenEncoder
+        message: str, public_key_length: int, token_encoder: ITokenEncoder
     ) -> AccessToken[T]:
         """Parse a serialized access token.
 
@@ -112,7 +110,7 @@ class AccessToken(SignableMessage, Generic[T]):
             issued_at=json_data["issuedAt"],
             expiry=json_data["expiry"],
             refresh_expiry=json_data["refreshExpiry"],
-            attributes=json_data["attributes"]
+            attributes=json_data["attributes"],
         )
 
         token.signature = signature
@@ -125,15 +123,19 @@ class AccessToken(SignableMessage, Generic[T]):
         Returns:
             The JSON-serialized token payload.
         """
-        return json.dumps({
-            "identity": self.identity,
-            "publicKey": self.public_key,
-            "rotationHash": self.rotation_hash,
-            "issuedAt": self.issued_at,
-            "expiry": self.expiry,
-            "refreshExpiry": self.refresh_expiry,
-            "attributes": self.attributes
-        }, separators=(',', ':'), sort_keys=False)
+        return json.dumps(
+            {
+                "identity": self.identity,
+                "publicKey": self.public_key,
+                "rotationHash": self.rotation_hash,
+                "issuedAt": self.issued_at,
+                "expiry": self.expiry,
+                "refreshExpiry": self.refresh_expiry,
+                "attributes": self.attributes,
+            },
+            separators=(",", ":"),
+            sort_keys=False,
+        )
 
     async def serialize_token(self, token_encoder: ITokenEncoder) -> str:
         """Serialize the token for transmission.
@@ -156,10 +158,7 @@ class AccessToken(SignableMessage, Generic[T]):
         return self.signature + token
 
     async def verify_token(
-        self,
-        verifier: IVerifier,
-        public_key: str,
-        timestamper: ITimestamper
+        self, verifier: IVerifier, public_key: str, timestamper: ITimestamper
     ) -> None:
         """Verify the token signature and validity period.
 
@@ -215,10 +214,7 @@ class AccessRequest(SignableMessage, Generic[T]):
         signature: Cryptographic signature of the request.
     """
 
-    def __init__(
-        self,
-        payload: Dict[str, Any]
-    ) -> None:
+    def __init__(self, payload: Dict[str, Any]) -> None:
         """Initialize an access request.
 
         Args:
@@ -235,7 +231,7 @@ class AccessRequest(SignableMessage, Generic[T]):
         Returns:
             The JSON-serialized payload.
         """
-        return json.dumps(self.payload, separators=(',', ':'), sort_keys=False)
+        return json.dumps(self.payload, separators=(",", ":"), sort_keys=False)
 
     async def _verify(
         self,
@@ -244,7 +240,7 @@ class AccessRequest(SignableMessage, Generic[T]):
         token_verifier: IVerifier,
         server_access_public_key: str,
         token_encoder: ITokenEncoder,
-        timestamper: ITimestamper
+        timestamper: ITimestamper,
     ) -> tuple[str, T]:
         """Verify the access request and extract identity and attributes.
 
@@ -272,9 +268,7 @@ class AccessRequest(SignableMessage, Generic[T]):
         """
         # Parse and verify the access token
         access_token = await AccessToken.parse(
-            self.payload["access"]["token"],
-            token_verifier.signature_length,
-            token_encoder
+            self.payload["access"]["token"], token_verifier.signature_length, token_encoder
         )
 
         # Verify token signature and validity
@@ -290,8 +284,7 @@ class AccessRequest(SignableMessage, Generic[T]):
 
         # Add lifetime to expiry
         expiry = datetime.fromtimestamp(
-            expiry.timestamp() + nonce_store.lifetime_in_seconds,
-            tz=timezone.utc
+            expiry.timestamp() + nonce_store.lifetime_in_seconds, tz=timezone.utc
         )
 
         if now > expiry:

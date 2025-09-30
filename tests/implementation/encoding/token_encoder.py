@@ -49,13 +49,13 @@ class TokenEncoder(ITokenEncoder):
             True
         """
         # Convert string to UTF-8 bytes
-        token_bytes = object.encode('utf-8')
+        token_bytes = object.encode("utf-8")
 
         # Compress with gzip at maximum compression level (9)
         compressed_token = gzip.compress(token_bytes, compresslevel=9)
 
         # Encode to base64url and remove padding
-        token = Base64.encode(compressed_token).replace('=', '')
+        token = Base64.encode(compressed_token).replace("=", "")
 
         return token
 
@@ -89,7 +89,7 @@ class TokenEncoder(ITokenEncoder):
 
         # Restore padding (base64 strings must have length divisible by 4)
         while len(token) % 4 != 0:
-            token += '='
+            token += "="
 
         # Decode from base64url
         compressed_token = Base64.decode(token)
@@ -98,6 +98,6 @@ class TokenEncoder(ITokenEncoder):
         object_bytes = gzip.decompress(compressed_token)
 
         # Convert UTF-8 bytes to string
-        object_string = object_bytes.decode('utf-8')
+        object_string = object_bytes.decode("utf-8")
 
         return object_string

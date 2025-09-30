@@ -37,10 +37,7 @@ class StartAuthenticationRequest(SerializableMessage):
         payload: Dictionary containing access and authentication request data.
     """
 
-    def __init__(
-        self,
-        payload: Dict[str, Dict[str, Any]]
-    ) -> None:
+    def __init__(self, payload: Dict[str, Dict[str, Any]]) -> None:
         """Initialize a start authentication request.
 
         Args:
@@ -57,7 +54,7 @@ class StartAuthenticationRequest(SerializableMessage):
         Returns:
             The serialized message as a JSON string.
         """
-        return json.dumps({"payload": self.payload}, separators=(',', ':'), sort_keys=False)
+        return json.dumps({"payload": self.payload}, separators=(",", ":"), sort_keys=False)
 
     @staticmethod
     def parse(message: str) -> StartAuthenticationRequest:
@@ -95,12 +92,7 @@ class StartAuthenticationResponse(ServerResponse[Dict[str, Any]]):
         signature: Optional cryptographic signature.
     """
 
-    def __init__(
-        self,
-        response: Dict[str, Any],
-        response_key_hash: str,
-        nonce: str
-    ) -> None:
+    def __init__(self, response: Dict[str, Any], response_key_hash: str, nonce: str) -> None:
         """Initialize a start authentication response.
 
         Args:
@@ -151,11 +143,7 @@ class FinishAuthenticationRequest(ClientRequest[Dict[str, Any]]):
         signature: Optional cryptographic signature.
     """
 
-    def __init__(
-        self,
-        request: Dict[str, Any],
-        nonce: str
-    ) -> None:
+    def __init__(self, request: Dict[str, Any], nonce: str) -> None:
         """Initialize a finish authentication request.
 
         Args:
@@ -202,12 +190,7 @@ class FinishAuthenticationResponse(ServerResponse[Dict[str, Any]]):
         signature: Optional cryptographic signature.
     """
 
-    def __init__(
-        self,
-        response: Dict[str, Any],
-        response_key_hash: str,
-        nonce: str
-    ) -> None:
+    def __init__(self, response: Dict[str, Any], response_key_hash: str, nonce: str) -> None:
         """Initialize a finish authentication response.
 
         Args:

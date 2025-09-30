@@ -225,9 +225,7 @@ class BetterAuthClient:
         """
         return await self.args["store"]["identifier"]["device"].get()
 
-    async def _verify_response(
-        self, response: Any, public_key_hash: str
-    ) -> None:
+    async def _verify_response(self, response: Any, public_key_hash: str) -> None:
         """Verify a server response signature and key hash.
 
         This internal method verifies that:
@@ -271,11 +269,9 @@ class BetterAuthClient:
             NetworkError: If network communication fails.
         """
         # Initialize authentication keys with recovery hash
-        identity, public_key, rotation_hash = (
-            await self.args["store"]["key"]["authentication"].initialize(
-                recovery_hash
-            )
-        )
+        identity, public_key, rotation_hash = await self.args["store"]["key"][
+            "authentication"
+        ].initialize(recovery_hash)
         device = await self.args["crypto"]["hasher"].sum(public_key)
 
         # Generate nonce for replay protection
@@ -295,9 +291,7 @@ class BetterAuthClient:
             nonce,
         )
 
-        await request.sign(
-            await self.args["store"]["key"]["authentication"].signer()
-        )
+        await request.sign(await self.args["store"]["key"]["authentication"].signer())
         message = await request.serialize()
 
         # Send request and parse response
@@ -306,9 +300,7 @@ class BetterAuthClient:
         )
 
         response = CreationResponse.parse(reply)
-        await self._verify_response(
-            response, response.payload["access"]["responseKeyHash"]
-        )
+        await self._verify_response(response, response.payload["access"]["responseKeyHash"])
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
@@ -344,9 +336,9 @@ class BetterAuthClient:
             StorageError: If storage operations fail.
         """
         # Initialize authentication keys (no recovery hash needed for linking)
-        _, public_key, rotation_hash = (
-            await self.args["store"]["key"]["authentication"].initialize()
-        )
+        _, public_key, rotation_hash = await self.args["store"]["key"][
+            "authentication"
+        ].initialize()
         device = await self.args["crypto"]["hasher"].sum(public_key)
 
         # Store identity and device
@@ -365,9 +357,7 @@ class BetterAuthClient:
             }
         )
 
-        await link_container.sign(
-            await self.args["store"]["key"]["authentication"].signer()
-        )
+        await link_container.sign(await self.args["store"]["key"]["authentication"].signer())
 
         return await link_container.serialize()
 
@@ -412,9 +402,7 @@ class BetterAuthClient:
             nonce,
         )
 
-        await request.sign(
-            await self.args["store"]["key"]["authentication"].signer()
-        )
+        await request.sign(await self.args["store"]["key"]["authentication"].signer())
         message = await request.serialize()
 
         # Send request and parse response
@@ -423,9 +411,7 @@ class BetterAuthClient:
         )
 
         response = LinkDeviceResponse.parse(reply)
-        await self._verify_response(
-            response, response.payload["access"]["responseKeyHash"]
-        )
+        await self._verify_response(response, response.payload["access"]["responseKeyHash"])
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
@@ -451,9 +437,7 @@ class BetterAuthClient:
             NetworkError: If network communication fails.
         """
         # Rotate keys
-        public_key, rotation_hash = (
-            await self.args["store"]["key"]["authentication"].rotate()
-        )
+        public_key, rotation_hash = await self.args["store"]["key"]["authentication"].rotate()
         nonce = await self.args["crypto"]["noncer"].generate128()
 
         # Create and sign the request
@@ -469,9 +453,7 @@ class BetterAuthClient:
             nonce,
         )
 
-        await request.sign(
-            await self.args["store"]["key"]["authentication"].signer()
-        )
+        await request.sign(await self.args["store"]["key"]["authentication"].signer())
         message = await request.serialize()
 
         # Send request and parse response
@@ -480,9 +462,7 @@ class BetterAuthClient:
         )
 
         response = RotateAuthenticationKeyResponse.parse(reply)
-        await self._verify_response(
-            response, response.payload["access"]["responseKeyHash"]
-        )
+        await self._verify_response(response, response.payload["access"]["responseKeyHash"])
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
@@ -517,9 +497,7 @@ class BetterAuthClient:
                 "access": {"nonce": start_nonce},
                 "request": {
                     "authentication": {
-                        "identity": await self.args["store"]["identifier"][
-                            "identity"
-                        ].get()
+                        "identity": await self.args["store"]["identifier"]["identity"].get()
                     }
                 },
             }
@@ -541,9 +519,7 @@ class BetterAuthClient:
 
         # Phase 2: Finish authentication
         # Initialize access keys
-        _, current_key, next_key_hash = (
-            await self.args["store"]["key"]["access"].initialize()
-        )
+        _, current_key, next_key_hash = await self.args["store"]["key"]["access"].initialize()
         finish_nonce = await self.args["crypto"]["noncer"].generate128()
 
         finish_request = FinishAuthenticationRequest(
@@ -554,17 +530,13 @@ class BetterAuthClient:
                 },
                 "authentication": {
                     "device": await self.args["store"]["identifier"]["device"].get(),
-                    "nonce": start_response.payload["response"]["authentication"][
-                        "nonce"
-                    ],
+                    "nonce": start_response.payload["response"]["authentication"]["nonce"],
                 },
             },
             finish_nonce,
         )
 
-        await finish_request.sign(
-            await self.args["store"]["key"]["authentication"].signer()
-        )
+        await finish_request.sign(await self.args["store"]["key"]["authentication"].signer())
         finish_message = await finish_request.serialize()
         finish_reply = await self.args["io"]["network"].send_request(
             self.args["paths"]["authenticate"]["finish"], finish_message
@@ -607,9 +579,7 @@ class BetterAuthClient:
             ExpiredTokenError: If the current token is expired.
         """
         # Rotate access keys
-        public_key, rotation_hash = (
-            await self.args["store"]["key"]["access"].rotate()
-        )
+        public_key, rotation_hash = await self.args["store"]["key"]["access"].rotate()
         nonce = await self.args["crypto"]["noncer"].generate128()
 
         # Create and sign the request
@@ -633,9 +603,7 @@ class BetterAuthClient:
         )
 
         response = RefreshAccessTokenResponse.parse(reply)
-        await self._verify_response(
-            response, response.payload["access"]["responseKeyHash"]
-        )
+        await self._verify_response(response, response.payload["access"]["responseKeyHash"])
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
@@ -646,9 +614,7 @@ class BetterAuthClient:
             response.payload["response"]["access"]["token"]
         )
 
-    async def recover_account(
-        self, identity: str, recovery_key: ISigningKey
-    ) -> None:
+    async def recover_account(self, identity: str, recovery_key: ISigningKey) -> None:
         """Recover an account using the recovery key.
 
         This method allows account recovery when all devices are lost or
@@ -674,9 +640,7 @@ class BetterAuthClient:
             NetworkError: If network communication fails.
         """
         # Initialize new authentication keys
-        _, current, rotation_hash = (
-            await self.args["store"]["key"]["authentication"].initialize()
-        )
+        _, current, rotation_hash = await self.args["store"]["key"]["authentication"].initialize()
         device = await self.args["crypto"]["hasher"].sum(current)
         nonce = await self.args["crypto"]["noncer"].generate128()
 
@@ -703,9 +667,7 @@ class BetterAuthClient:
         )
 
         response = RecoverAccountResponse.parse(reply)
-        await self._verify_response(
-            response, response.payload["access"]["responseKeyHash"]
-        )
+        await self._verify_response(response, response.payload["access"]["responseKeyHash"])
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
@@ -764,9 +726,7 @@ class BetterAuthClient:
         )
 
         # Sign the request
-        await access_request.sign(
-            await self.args["store"]["key"]["access"].signer()
-        )
+        await access_request.sign(await self.args["store"]["key"]["access"].signer())
         message = await access_request.serialize()
 
         # Send request and parse response
@@ -774,10 +734,7 @@ class BetterAuthClient:
         response = ScannableResponse.parse(reply)
 
         # Verify nonce matches
-        if (
-            response.payload["access"]["nonce"]
-            != access_request.payload["access"]["nonce"]
-        ):
+        if response.payload["access"]["nonce"] != access_request.payload["access"]["nonce"]:
             raise AuthenticationError("incorrect nonce")
 
         return reply

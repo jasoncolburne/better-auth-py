@@ -49,14 +49,14 @@ class Rfc3339Nano(ITimestamper):
         # Handle the Z suffix replacement
         # isoformat() gives us something like: 2025-01-01T12:00:00.123456+00:00
         # We need: 2025-01-01T12:00:00.123456000Z
-        if iso_string.endswith('+00:00'):
-            iso_string = iso_string[:-6] + 'Z'
-        elif not iso_string.endswith('Z'):
+        if iso_string.endswith("+00:00"):
+            iso_string = iso_string[:-6] + "Z"
+        elif not iso_string.endswith("Z"):
             # If no timezone info in the string, add Z
-            iso_string = iso_string + 'Z'
+            iso_string = iso_string + "Z"
 
         # Now replace Z with 000000Z to extend microseconds to nanoseconds
-        return iso_string.replace('Z', '000000Z')
+        return iso_string.replace("Z", "000000Z")
 
     def parse(self, when: str | datetime) -> datetime:
         """Parse a timestamp string or datetime into a datetime object.
@@ -79,11 +79,11 @@ class Rfc3339Nano(ITimestamper):
 
         # Remove nanosecond precision (keep only microseconds) for Python parsing
         # Convert 000000Z to Z (remove the extra zeros)
-        timestamp_str = when.replace('000000Z', 'Z').replace('000Z', 'Z')
+        timestamp_str = when.replace("000000Z", "Z").replace("000Z", "Z")
 
         # Replace 'Z' with '+00:00' for fromisoformat compatibility
-        if timestamp_str.endswith('Z'):
-            timestamp_str = timestamp_str[:-1] + '+00:00'
+        if timestamp_str.endswith("Z"):
+            timestamp_str = timestamp_str[:-1] + "+00:00"
 
         return datetime.fromisoformat(timestamp_str)
 

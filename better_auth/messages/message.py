@@ -62,7 +62,7 @@ class SignableMessage(SerializableMessage):
         if self.payload is None:
             raise RuntimeError("payload not defined")
 
-        return json.dumps(self.payload, separators=(',', ':'), sort_keys=False)
+        return json.dumps(self.payload, separators=(",", ":"), sort_keys=False)
 
     async def serialize(self) -> str:
         """Serialize the message including its signature.

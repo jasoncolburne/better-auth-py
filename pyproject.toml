@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Python implementation of better-auth - Agnostic authentication framework"
 readme = "README.md"
 authors = [
-    {name = "Jason Colburne", email = ""}
+    {name = "Jason Colburne", email = "jasoncolburne@users.noreply.github.com"}
 ]
 license = {text = "MIT"}
 keywords = ["authentication", "security", "cryptography"]
