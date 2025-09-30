@@ -25,7 +25,41 @@ from better_auth.api import (
     BetterAuthServer,
     BetterAuthServerConfig,
 )
-from better_auth.interfaces import INetwork, ISigningKey, IVerificationKey, IVerifier
+from better_auth.api.client import (
+    CryptoConfig as ClientCryptoConfig,
+    EncodingConfig as ClientEncodingConfig,
+    IOConfig,
+    IdentifierStoreConfig,
+    KeyStoreConfig,
+    PublicKeyConfig as ClientPublicKeyConfig,
+    StoreConfig as ClientStoreConfig,
+    TokenStoreConfig,
+)
+from better_auth.api.server import (
+    AccessPublicKeyConfig,
+    AccessStoreConfig,
+    AccessVerifierCryptoConfig,
+    AccessVerifierEncodingConfig,
+    AccessVerifierStorageConfig,
+    AccessVerifierStoreConfig,
+    AuthenticationStoreConfig,
+    CryptoConfig as ServerCryptoConfig,
+    EncodingConfig as ServerEncodingConfig,
+    ExpiryConfig,
+    KeyPairConfig,
+    RecoveryStoreConfig,
+    StoreConfig as ServerStoreConfig,
+)
+from better_auth.interfaces import (
+    AuthenticatePaths,
+    AuthenticationPaths,
+    INetwork,
+    ISigningKey,
+    IVerificationKey,
+    IVerifier,
+    RegisterPaths,
+    RotatePaths,
+)
 from better_auth.messages import AccessRequest, ServerResponse
 from examples.implementation.crypto import Hasher, Noncer, Secp256r1, Secp256r1Verifier
 from examples.implementation.encoding import (
@@ -360,45 +394,43 @@ async def create_server(
     """
     ecc_verifier = Secp256r1Verifier()
     hasher = Hasher()
-    noncer = Noncer()
 
     access_key_hash_store = ServerTimeLockStore(60 * 60 * expiry["refresh_lifetime_in_hours"])
     authentication_nonce_store = ServerAuthenticationNonceStore(
         expiry["authentication_challenge_lifetime_in_seconds"]
     )
 
-    config: BetterAuthServerConfig = {
-        "crypto": {
-            "hasher": hasher,
-            "key_pair": {
-                "access": keys["access_signer"],
-                "response": keys["response_signer"],
-            },
-            "noncer": noncer,
-            "verifier": ecc_verifier,
-        },
-        "encoding": {
-            "identity_verifier": IdentityVerifier(),
-            "timestamper": Rfc3339Nano(),
-            "token_encoder": TokenEncoder(),
-        },
-        "expiry": {
-            "access_in_minutes": expiry["access_lifetime_in_minutes"],
-            "refresh_in_hours": expiry["refresh_lifetime_in_hours"],
-        },
-        "store": {
-            "access": {
-                "key_hash": access_key_hash_store,
-            },
-            "authentication": {
-                "key": ServerAuthenticationKeyStore(),
-                "nonce": authentication_nonce_store,
-            },
-            "recovery": {
-                "hash": ServerRecoveryHashStore(),
-            },
-        },
-    }
+    config = BetterAuthServerConfig(
+        crypto=ServerCryptoConfig(
+            hasher=hasher,
+            key_pair=KeyPairConfig(
+                access=keys["access_signer"],
+                response=keys["response_signer"],
+            ),
+            verifier=ecc_verifier,
+        ),
+        encoding=ServerEncodingConfig(
+            identity_verifier=IdentityVerifier(),
+            timestamper=Rfc3339Nano(),
+            token_encoder=TokenEncoder(),
+        ),
+        expiry=ExpiryConfig(
+            access_in_minutes=expiry["access_lifetime_in_minutes"],
+            refresh_in_hours=expiry["refresh_lifetime_in_hours"],
+        ),
+        store=ServerStoreConfig(
+            access=AccessStoreConfig(
+                key_hash=access_key_hash_store,
+            ),
+            authentication=AuthenticationStoreConfig(
+                key=ServerAuthenticationKeyStore(),
+                nonce=authentication_nonce_store,
+            ),
+            recovery=RecoveryStoreConfig(
+                hash=ServerRecoveryHashStore(),
+            ),
+        ),
+    )
 
     return BetterAuthServer(config)
 
@@ -421,23 +453,23 @@ async def create_verifier(
     ecc_verifier = Secp256r1Verifier()
     access_nonce_store = ServerTimeLockStore(expiry["access_window_in_seconds"])
 
-    config: AccessVerifierConfig = {
-        "crypto": {
-            "public_key": {
-                "access": keys["access_verifier"],
-            },
-            "verifier": ecc_verifier,
-        },
-        "encoding": {
-            "token_encoder": TokenEncoder(),
-            "timestamper": Rfc3339Nano(),
-        },
-        "store": {
-            "access": {
-                "nonce": access_nonce_store,
-            },
-        },
-    }
+    config = AccessVerifierConfig(
+        crypto=AccessVerifierCryptoConfig(
+            public_key=AccessPublicKeyConfig(
+                access=keys["access_verifier"],
+            ),
+            verifier=ecc_verifier,
+        ),
+        encoding=AccessVerifierEncodingConfig(
+            token_encoder=TokenEncoder(),
+            timestamper=Rfc3339Nano(),
+        ),
+        store=AccessVerifierStorageConfig(
+            access=AccessVerifierStoreConfig(
+                nonce=access_nonce_store,
+            ),
+        ),
+    )
 
     return AccessVerifier(config)
 
@@ -598,35 +630,39 @@ def better_auth_client(
     Returns:
         Configured BetterAuthClient instance.
     """
-    config: BetterAuthClientConfig = {
-        "crypto": {
-            "hasher": hasher,
-            "noncer": noncer,
-            "public_key": {
-                "response": crypto_keys["response_signer"],
-            },
-        },
-        "encoding": {
-            "timestamper": Rfc3339Nano(),
-        },
-        "io": {
-            "network": mock_network_server,
-        },
-        "paths": AUTHENTICATION_PATHS,
-        "store": {
-            "identifier": {
-                "device": ClientValueStore(),
-                "identity": ClientValueStore(),
-            },
-            "key": {
-                "access": ClientRotatingKeyStore(),
-                "authentication": ClientRotatingKeyStore(),
-            },
-            "token": {
-                "access": ClientValueStore(),
-            },
-        },
-    }
+    config = BetterAuthClientConfig(
+        crypto=ClientCryptoConfig(
+            hasher=hasher,
+            noncer=noncer,
+            public_key=ClientPublicKeyConfig(
+                response=crypto_keys["response_signer"],
+            ),
+        ),
+        encoding=ClientEncodingConfig(
+            timestamper=Rfc3339Nano(),
+        ),
+        io=IOConfig(
+            network=mock_network_server,
+        ),
+        paths=AuthenticationPaths(
+            authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
+            register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+            rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+        ),
+        store=ClientStoreConfig(
+            identifier=IdentifierStoreConfig(
+                device=ClientValueStore(),
+                identity=ClientValueStore(),
+            ),
+            key=KeyStoreConfig(
+                access=ClientRotatingKeyStore(),
+                authentication=ClientRotatingKeyStore(),
+            ),
+            token=TokenStoreConfig(
+                access=ClientValueStore(),
+            ),
+        ),
+    )
 
     return BetterAuthClient(config)
 
@@ -683,68 +719,76 @@ async def test_recovers_from_loss(
 
     # Original device client
     better_auth_client = BetterAuthClient(
-        {
-            "crypto": {
-                "hasher": hasher,
-                "noncer": noncer,
-                "public_key": {
-                    "response": crypto_keys["response_signer"],
-                },
-            },
-            "encoding": {
-                "timestamper": Rfc3339Nano(),
-            },
-            "io": {
-                "network": mock_network_server,
-            },
-            "paths": AUTHENTICATION_PATHS,
-            "store": {
-                "identifier": {
-                    "device": ClientValueStore(),
-                    "identity": ClientValueStore(),
-                },
-                "key": {
-                    "access": ClientRotatingKeyStore(),
-                    "authentication": ClientRotatingKeyStore(),
-                },
-                "token": {
-                    "access": ClientValueStore(),
-                },
-            },
-        }
+        BetterAuthClientConfig(
+            crypto=ClientCryptoConfig(
+                hasher=hasher,
+                noncer=noncer,
+                public_key=ClientPublicKeyConfig(
+                    response=crypto_keys["response_signer"],
+                ),
+            ),
+            encoding=ClientEncodingConfig(
+                timestamper=Rfc3339Nano(),
+            ),
+            io=IOConfig(
+                network=mock_network_server,
+            ),
+            paths=AuthenticationPaths(
+                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
+                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+            ),
+            store=ClientStoreConfig(
+                identifier=IdentifierStoreConfig(
+                    device=ClientValueStore(),
+                    identity=ClientValueStore(),
+                ),
+                key=KeyStoreConfig(
+                    access=ClientRotatingKeyStore(),
+                    authentication=ClientRotatingKeyStore(),
+                ),
+                token=TokenStoreConfig(
+                    access=ClientValueStore(),
+                ),
+            ),
+        )
     )
 
     # Recovered device client (simulates new device)
     recovered_better_auth_client = BetterAuthClient(
-        {
-            "crypto": {
-                "hasher": Hasher(),
-                "noncer": Noncer(),
-                "public_key": {
-                    "response": crypto_keys["response_signer"],
-                },
-            },
-            "encoding": {
-                "timestamper": Rfc3339Nano(),
-            },
-            "io": {
-                "network": mock_network_server,
-            },
-            "paths": AUTHENTICATION_PATHS,
-            "store": {
-                "identifier": {
-                    "device": ClientValueStore(),
-                    "identity": ClientValueStore(),
-                },
-                "key": {
-                    "access": ClientRotatingKeyStore(),
-                    "authentication": ClientRotatingKeyStore(),
-                },
-                "token": {
-                    "access": ClientValueStore(),
-                },
-            },
-        }
+        BetterAuthClientConfig(
+            crypto=ClientCryptoConfig(
+                hasher=Hasher(),
+                noncer=Noncer(),
+                public_key=ClientPublicKeyConfig(
+                    response=crypto_keys["response_signer"],
+                ),
+            ),
+            encoding=ClientEncodingConfig(
+                timestamper=Rfc3339Nano(),
+            ),
+            io=IOConfig(
+                network=mock_network_server,
+            ),
+            paths=AuthenticationPaths(
+                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
+                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+            ),
+            store=ClientStoreConfig(
+                identifier=IdentifierStoreConfig(
+                    device=ClientValueStore(),
+                    identity=ClientValueStore(),
+                ),
+                key=KeyStoreConfig(
+                    access=ClientRotatingKeyStore(),
+                    authentication=ClientRotatingKeyStore(),
+                ),
+                token=TokenStoreConfig(
+                    access=ClientValueStore(),
+                ),
+            ),
+        )
     )
 
     # Create account on original device
@@ -788,68 +832,76 @@ async def test_links_another_device(
 
     # Original device client
     better_auth_client = BetterAuthClient(
-        {
-            "crypto": {
-                "hasher": hasher,
-                "noncer": noncer,
-                "public_key": {
-                    "response": crypto_keys["response_signer"],
-                },
-            },
-            "encoding": {
-                "timestamper": Rfc3339Nano(),
-            },
-            "io": {
-                "network": mock_network_server,
-            },
-            "paths": AUTHENTICATION_PATHS,
-            "store": {
-                "identifier": {
-                    "device": ClientValueStore(),
-                    "identity": ClientValueStore(),
-                },
-                "key": {
-                    "access": ClientRotatingKeyStore(),
-                    "authentication": ClientRotatingKeyStore(),
-                },
-                "token": {
-                    "access": ClientValueStore(),
-                },
-            },
-        }
+        BetterAuthClientConfig(
+            crypto=ClientCryptoConfig(
+                hasher=hasher,
+                noncer=noncer,
+                public_key=ClientPublicKeyConfig(
+                    response=crypto_keys["response_signer"],
+                ),
+            ),
+            encoding=ClientEncodingConfig(
+                timestamper=Rfc3339Nano(),
+            ),
+            io=IOConfig(
+                network=mock_network_server,
+            ),
+            paths=AuthenticationPaths(
+                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
+                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+            ),
+            store=ClientStoreConfig(
+                identifier=IdentifierStoreConfig(
+                    device=ClientValueStore(),
+                    identity=ClientValueStore(),
+                ),
+                key=KeyStoreConfig(
+                    access=ClientRotatingKeyStore(),
+                    authentication=ClientRotatingKeyStore(),
+                ),
+                token=TokenStoreConfig(
+                    access=ClientValueStore(),
+                ),
+            ),
+        )
     )
 
     # Linked device client (simulates new device)
     linked_better_auth_client = BetterAuthClient(
-        {
-            "crypto": {
-                "hasher": Hasher(),
-                "noncer": Noncer(),
-                "public_key": {
-                    "response": crypto_keys["response_signer"],
-                },
-            },
-            "encoding": {
-                "timestamper": Rfc3339Nano(),
-            },
-            "io": {
-                "network": mock_network_server,
-            },
-            "paths": AUTHENTICATION_PATHS,
-            "store": {
-                "identifier": {
-                    "device": ClientValueStore(),
-                    "identity": ClientValueStore(),
-                },
-                "key": {
-                    "access": ClientRotatingKeyStore(),
-                    "authentication": ClientRotatingKeyStore(),
-                },
-                "token": {
-                    "access": ClientValueStore(),
-                },
-            },
-        }
+        BetterAuthClientConfig(
+            crypto=ClientCryptoConfig(
+                hasher=Hasher(),
+                noncer=Noncer(),
+                public_key=ClientPublicKeyConfig(
+                    response=crypto_keys["response_signer"],
+                ),
+            ),
+            encoding=ClientEncodingConfig(
+                timestamper=Rfc3339Nano(),
+            ),
+            io=IOConfig(
+                network=mock_network_server,
+            ),
+            paths=AuthenticationPaths(
+                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
+                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+            ),
+            store=ClientStoreConfig(
+                identifier=IdentifierStoreConfig(
+                    device=ClientValueStore(),
+                    identity=ClientValueStore(),
+                ),
+                key=KeyStoreConfig(
+                    access=ClientRotatingKeyStore(),
+                    authentication=ClientRotatingKeyStore(),
+                ),
+                token=TokenStoreConfig(
+                    access=ClientValueStore(),
+                ),
+            ),
+        )
     )
 
     # Create account on original device
@@ -914,35 +966,39 @@ async def test_rejects_expired_authentication_challenges(
     )
 
     better_auth_client = BetterAuthClient(
-        {
-            "crypto": {
-                "hasher": hasher,
-                "noncer": noncer,
-                "public_key": {
-                    "response": crypto_keys["response_signer"],
-                },
-            },
-            "encoding": {
-                "timestamper": Rfc3339Nano(),
-            },
-            "io": {
-                "network": mock_network_server,
-            },
-            "paths": AUTHENTICATION_PATHS,
-            "store": {
-                "identifier": {
-                    "device": ClientValueStore(),
-                    "identity": ClientValueStore(),
-                },
-                "key": {
-                    "access": ClientRotatingKeyStore(),
-                    "authentication": ClientRotatingKeyStore(),
-                },
-                "token": {
-                    "access": ClientValueStore(),
-                },
-            },
-        }
+        BetterAuthClientConfig(
+            crypto=ClientCryptoConfig(
+                hasher=hasher,
+                noncer=noncer,
+                public_key=ClientPublicKeyConfig(
+                    response=crypto_keys["response_signer"],
+                ),
+            ),
+            encoding=ClientEncodingConfig(
+                timestamper=Rfc3339Nano(),
+            ),
+            io=IOConfig(
+                network=mock_network_server,
+            ),
+            paths=AuthenticationPaths(
+                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
+                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+            ),
+            store=ClientStoreConfig(
+                identifier=IdentifierStoreConfig(
+                    device=ClientValueStore(),
+                    identity=ClientValueStore(),
+                ),
+                key=KeyStoreConfig(
+                    access=ClientRotatingKeyStore(),
+                    authentication=ClientRotatingKeyStore(),
+                ),
+                token=TokenStoreConfig(
+                    access=ClientValueStore(),
+                ),
+            ),
+        )
     )
 
     recovery_hash = await hasher.sum(await crypto_keys["recovery_signer"].public())
@@ -999,35 +1055,39 @@ async def test_rejects_expired_refresh_tokens(
     )
 
     better_auth_client = BetterAuthClient(
-        {
-            "crypto": {
-                "hasher": hasher,
-                "noncer": noncer,
-                "public_key": {
-                    "response": crypto_keys["response_signer"],
-                },
-            },
-            "encoding": {
-                "timestamper": Rfc3339Nano(),
-            },
-            "io": {
-                "network": mock_network_server,
-            },
-            "paths": AUTHENTICATION_PATHS,
-            "store": {
-                "identifier": {
-                    "device": ClientValueStore(),
-                    "identity": ClientValueStore(),
-                },
-                "key": {
-                    "access": ClientRotatingKeyStore(),
-                    "authentication": ClientRotatingKeyStore(),
-                },
-                "token": {
-                    "access": ClientValueStore(),
-                },
-            },
-        }
+        BetterAuthClientConfig(
+            crypto=ClientCryptoConfig(
+                hasher=hasher,
+                noncer=noncer,
+                public_key=ClientPublicKeyConfig(
+                    response=crypto_keys["response_signer"],
+                ),
+            ),
+            encoding=ClientEncodingConfig(
+                timestamper=Rfc3339Nano(),
+            ),
+            io=IOConfig(
+                network=mock_network_server,
+            ),
+            paths=AuthenticationPaths(
+                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
+                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+            ),
+            store=ClientStoreConfig(
+                identifier=IdentifierStoreConfig(
+                    device=ClientValueStore(),
+                    identity=ClientValueStore(),
+                ),
+                key=KeyStoreConfig(
+                    access=ClientRotatingKeyStore(),
+                    authentication=ClientRotatingKeyStore(),
+                ),
+                token=TokenStoreConfig(
+                    access=ClientValueStore(),
+                ),
+            ),
+        )
     )
 
     recovery_hash = await hasher.sum(await crypto_keys["recovery_signer"].public())
@@ -1084,35 +1144,39 @@ async def test_rejects_expired_access_tokens(
     )
 
     better_auth_client = BetterAuthClient(
-        {
-            "crypto": {
-                "hasher": hasher,
-                "noncer": noncer,
-                "public_key": {
-                    "response": crypto_keys["response_signer"],
-                },
-            },
-            "encoding": {
-                "timestamper": Rfc3339Nano(),
-            },
-            "io": {
-                "network": mock_network_server,
-            },
-            "paths": AUTHENTICATION_PATHS,
-            "store": {
-                "identifier": {
-                    "device": ClientValueStore(),
-                    "identity": ClientValueStore(),
-                },
-                "key": {
-                    "access": ClientRotatingKeyStore(),
-                    "authentication": ClientRotatingKeyStore(),
-                },
-                "token": {
-                    "access": ClientValueStore(),
-                },
-            },
-        }
+        BetterAuthClientConfig(
+            crypto=ClientCryptoConfig(
+                hasher=hasher,
+                noncer=noncer,
+                public_key=ClientPublicKeyConfig(
+                    response=crypto_keys["response_signer"],
+                ),
+            ),
+            encoding=ClientEncodingConfig(
+                timestamper=Rfc3339Nano(),
+            ),
+            io=IOConfig(
+                network=mock_network_server,
+            ),
+            paths=AuthenticationPaths(
+                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
+                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+            ),
+            store=ClientStoreConfig(
+                identifier=IdentifierStoreConfig(
+                    device=ClientValueStore(),
+                    identity=ClientValueStore(),
+                ),
+                key=KeyStoreConfig(
+                    access=ClientRotatingKeyStore(),
+                    authentication=ClientRotatingKeyStore(),
+                ),
+                token=TokenStoreConfig(
+                    access=ClientValueStore(),
+                ),
+            ),
+        )
     )
 
     recovery_hash = await hasher.sum(await crypto_keys["recovery_signer"].public())
@@ -1150,35 +1214,39 @@ async def test_detects_tampered_access_tokens(
 
     access_token_store = ClientValueStore()
     better_auth_client = BetterAuthClient(
-        {
-            "crypto": {
-                "hasher": hasher,
-                "noncer": noncer,
-                "public_key": {
-                    "response": crypto_keys["response_signer"],
-                },
-            },
-            "encoding": {
-                "timestamper": Rfc3339Nano(),
-            },
-            "io": {
-                "network": mock_network_server,
-            },
-            "paths": AUTHENTICATION_PATHS,
-            "store": {
-                "identifier": {
-                    "device": ClientValueStore(),
-                    "identity": ClientValueStore(),
-                },
-                "key": {
-                    "access": ClientRotatingKeyStore(),
-                    "authentication": ClientRotatingKeyStore(),
-                },
-                "token": {
-                    "access": access_token_store,
-                },
-            },
-        }
+        BetterAuthClientConfig(
+            crypto=ClientCryptoConfig(
+                hasher=hasher,
+                noncer=noncer,
+                public_key=ClientPublicKeyConfig(
+                    response=crypto_keys["response_signer"],
+                ),
+            ),
+            encoding=ClientEncodingConfig(
+                timestamper=Rfc3339Nano(),
+            ),
+            io=IOConfig(
+                network=mock_network_server,
+            ),
+            paths=AuthenticationPaths(
+                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
+                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+            ),
+            store=ClientStoreConfig(
+                identifier=IdentifierStoreConfig(
+                    device=ClientValueStore(),
+                    identity=ClientValueStore(),
+                ),
+                key=KeyStoreConfig(
+                    access=ClientRotatingKeyStore(),
+                    authentication=ClientRotatingKeyStore(),
+                ),
+                token=TokenStoreConfig(
+                    access=access_token_store,
+                ),
+            ),
+        )
     )
 
     recovery_hash = await hasher.sum(await crypto_keys["recovery_signer"].public())
@@ -1227,35 +1295,39 @@ async def test_detects_mismatched_access_nonce(
 
     access_token_store = ClientValueStore()
     better_auth_client = BetterAuthClient(
-        {
-            "crypto": {
-                "hasher": hasher,
-                "noncer": noncer,
-                "public_key": {
-                    "response": crypto_keys["response_signer"],
-                },
-            },
-            "encoding": {
-                "timestamper": Rfc3339Nano(),
-            },
-            "io": {
-                "network": mock_network_server,
-            },
-            "paths": AUTHENTICATION_PATHS,
-            "store": {
-                "identifier": {
-                    "device": ClientValueStore(),
-                    "identity": ClientValueStore(),
-                },
-                "key": {
-                    "access": ClientRotatingKeyStore(),
-                    "authentication": ClientRotatingKeyStore(),
-                },
-                "token": {
-                    "access": access_token_store,
-                },
-            },
-        }
+        BetterAuthClientConfig(
+            crypto=ClientCryptoConfig(
+                hasher=hasher,
+                noncer=noncer,
+                public_key=ClientPublicKeyConfig(
+                    response=crypto_keys["response_signer"],
+                ),
+            ),
+            encoding=ClientEncodingConfig(
+                timestamper=Rfc3339Nano(),
+            ),
+            io=IOConfig(
+                network=mock_network_server,
+            ),
+            paths=AuthenticationPaths(
+                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
+                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+            ),
+            store=ClientStoreConfig(
+                identifier=IdentifierStoreConfig(
+                    device=ClientValueStore(),
+                    identity=ClientValueStore(),
+                ),
+                key=KeyStoreConfig(
+                    access=ClientRotatingKeyStore(),
+                    authentication=ClientRotatingKeyStore(),
+                ),
+                token=TokenStoreConfig(
+                    access=access_token_store,
+                ),
+            ),
+        )
     )
 
     recovery_hash = await hasher.sum(await crypto_keys["recovery_signer"].public())

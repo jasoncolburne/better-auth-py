@@ -7,7 +7,13 @@ storage, encoding, I/O, and authentication paths.
 from .crypto import IHasher, INoncer, ISigningKey, IVerificationKey, IVerifier
 from .encoding import IIdentityVerifier, ITimestamper, ITokenEncoder
 from .io import INetwork
-from .paths import IAuthenticationPaths
+from .paths import (
+    AuthenticatePaths,
+    AuthenticationPaths,
+    IAuthenticationPaths,
+    RegisterPaths,
+    RotatePaths,
+)
 from .storage import (
     IClientRotatingKeyStore,
     IClientValueStore,
@@ -31,7 +37,11 @@ __all__ = [
     # io
     "INetwork",
     # paths
+    "AuthenticatePaths",
+    "AuthenticationPaths",
     "IAuthenticationPaths",
+    "RegisterPaths",
+    "RotatePaths",
     # storage
     "IClientRotatingKeyStore",
     "IClientValueStore",

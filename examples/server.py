@@ -13,6 +13,22 @@ from typing import Any, Callable, Dict, TypedDict
 sys.path.insert(0, "/Users/jason/github.com/jasoncolburne/better-auth-py")
 
 from better_auth import AccessVerifier, BetterAuthServer, BetterAuthServerConfig
+from better_auth.api.server import (
+    AccessPublicKeyConfig,
+    AccessStoreConfig,
+    AccessVerifierConfig,
+    AccessVerifierCryptoConfig,
+    AccessVerifierEncodingConfig,
+    AccessVerifierStorageConfig,
+    AccessVerifierStoreConfig,
+    AuthenticationStoreConfig,
+    CryptoConfig,
+    EncodingConfig,
+    ExpiryConfig,
+    KeyPairConfig,
+    RecoveryStoreConfig,
+    StoreConfig,
+)
 from better_auth.messages import AccessRequest, ServerResponse
 from examples.implementation.crypto import Hasher, Noncer, Secp256r1, Secp256r1Verifier
 from examples.implementation.encoding import IdentityVerifier, Rfc3339Nano, TokenEncoder
@@ -83,59 +99,57 @@ class Server:
 
         # Create BetterAuthServer config
         self.server_config = BetterAuthServerConfig(
-            crypto={
-                "hasher": self.hasher,
-                "key_pair": {
-                    "response": self.server_response_key,
-                    "access": self.server_access_key,
-                },
-                "verifier": self.verifier,
-            },
-            encoding={
-                "identity_verifier": identity_verifier,
-                "timestamper": timestamper,
-                "token_encoder": token_encoder,
-            },
-            expiry={
-                "access_in_minutes": int(access_lifetime.total_seconds() / 60),
-                "refresh_in_hours": int(refresh_lifetime.total_seconds() / 3600),
-            },
-            store={
-                "access": {
-                    "key_hash": access_key_hash_store,
-                },
-                "authentication": {
-                    "key": authentication_key_store,
-                    "nonce": authentication_nonce_store,
-                },
-                "recovery": {
-                    "hash": recovery_hash_store,
-                },
-            },
+            crypto=CryptoConfig(
+                hasher=self.hasher,
+                key_pair=KeyPairConfig(
+                    response=self.server_response_key,
+                    access=self.server_access_key,
+                ),
+                verifier=self.verifier,
+            ),
+            encoding=EncodingConfig(
+                identity_verifier=identity_verifier,
+                timestamper=timestamper,
+                token_encoder=token_encoder,
+            ),
+            expiry=ExpiryConfig(
+                access_in_minutes=int(access_lifetime.total_seconds() / 60),
+                refresh_in_hours=int(refresh_lifetime.total_seconds() / 3600),
+            ),
+            store=StoreConfig(
+                access=AccessStoreConfig(
+                    key_hash=access_key_hash_store,
+                ),
+                authentication=AuthenticationStoreConfig(
+                    key=authentication_key_store,
+                    nonce=authentication_nonce_store,
+                ),
+                recovery=RecoveryStoreConfig(
+                    hash=recovery_hash_store,
+                ),
+            ),
         )
 
         self.ba = BetterAuthServer(self.server_config)
 
         # Create AccessVerifier
-        from better_auth.api.server import AccessVerifierConfig
-
         self.av = AccessVerifier(
             AccessVerifierConfig(
-                crypto={
-                    "public_key": {
-                        "access": self.server_access_key,
-                    },
-                    "verifier": self.verifier,
-                },
-                encoding={
-                    "token_encoder": token_encoder,
-                    "timestamper": timestamper,
-                },
-                store={
-                    "access": {
-                        "nonce": access_nonce_store,
-                    },
-                },
+                crypto=AccessVerifierCryptoConfig(
+                    public_key=AccessPublicKeyConfig(
+                        access=self.server_access_key,
+                    ),
+                    verifier=self.verifier,
+                ),
+                encoding=AccessVerifierEncodingConfig(
+                    token_encoder=token_encoder,
+                    timestamper=timestamper,
+                ),
+                store=AccessVerifierStorageConfig(
+                    access=AccessVerifierStoreConfig(
+                        nonce=access_nonce_store,
+                    ),
+                ),
             )
         )
 
@@ -222,12 +236,7 @@ class Server:
             The serialized server response.
         """
         # Verify the access token
-        identity, attributes = await self.av.verify(message)
-
-        print(f"access request: {message}", file=sys.stderr)
-        print(f" identity: {identity}", file=sys.stderr)
-        print(f" attributes: {attributes}", file=sys.stderr)
-        print("", file=sys.stderr)
+        _, _ = await self.av.verify(message)
 
         # Parse the access request
         # request_data = json.loads(message)
