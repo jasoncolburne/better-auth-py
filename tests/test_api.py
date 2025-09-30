@@ -27,13 +27,13 @@ from better_auth.api import (
 )
 from better_auth.interfaces import INetwork, ISigningKey, IVerificationKey, IVerifier
 from better_auth.messages import AccessRequest, ServerResponse
-from tests.implementation.crypto import Hasher, Noncer, Secp256r1, Secp256r1Verifier
-from tests.implementation.encoding import (
+from examples.implementation.crypto import Hasher, Noncer, Secp256r1, Secp256r1Verifier
+from examples.implementation.encoding import (
     IdentityVerifier,
     Rfc3339Nano,
     TokenEncoder,
 )
-from tests.implementation.storage import (
+from examples.implementation.storage import (
     ClientRotatingKeyStore,
     ClientValueStore,
     ServerAuthenticationKeyStore,

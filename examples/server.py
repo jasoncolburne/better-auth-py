@@ -14,9 +14,9 @@ sys.path.insert(0, "/Users/jason/github.com/jasoncolburne/better-auth-py")
 
 from better_auth import AccessVerifier, BetterAuthServer, BetterAuthServerConfig
 from better_auth.messages import AccessRequest, ServerResponse
-from tests.implementation.crypto import Hasher, Noncer, Secp256r1, Secp256r1Verifier
-from tests.implementation.encoding import IdentityVerifier, Rfc3339Nano, TokenEncoder
-from tests.implementation.storage import (
+from examples.implementation.crypto import Hasher, Noncer, Secp256r1, Secp256r1Verifier
+from examples.implementation.encoding import IdentityVerifier, Rfc3339Nano, TokenEncoder
+from examples.implementation.storage import (
     ServerAuthenticationKeyStore,
     ServerAuthenticationNonceStore,
     ServerRecoveryHashStore,
