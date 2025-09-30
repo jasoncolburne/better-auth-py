@@ -7,6 +7,7 @@ as well as the AccessVerifier class for verifying authenticated requests.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import TypedDict, TypeVar
 
 from better_auth.exceptions import (
@@ -443,13 +444,8 @@ class BetterAuthServer:
         later = self._config["encoding"]["timestamper"].parse(now)
         even_later = self._config["encoding"]["timestamper"].parse(now)
 
-        later_minutes = later.minute + self._config["expiry"]["access_in_minutes"]
-        even_later_hours = even_later.hour + self._config["expiry"]["refresh_in_hours"]
-
-        later = later.replace(minute=later_minutes % 60, hour=later.hour + later_minutes // 60)
-        even_later = even_later.replace(
-            hour=even_later_hours % 24, day=even_later.day + even_later_hours // 24
-        )
+        later += timedelta(minutes=self._config["expiry"]["access_in_minutes"])
+        even_later += timedelta(hours=self._config["expiry"]["refresh_in_hours"])
 
         issued_at = self._config["encoding"]["timestamper"].format(now)
         expiry = self._config["encoding"]["timestamper"].format(later)
@@ -536,8 +532,7 @@ class BetterAuthServer:
         await self._config["store"]["access"]["key_hash"].reserve(hash_value)
 
         later = self._config["encoding"]["timestamper"].parse(now)
-        later_minutes = later.minute + self._config["expiry"]["access_in_minutes"]
-        later = later.replace(minute=later_minutes % 60, hour=later.hour + later_minutes // 60)
+        later += timedelta(minutes=self._config["expiry"]["access_in_minutes"])
 
         issued_at = self._config["encoding"]["timestamper"].format(now)
         expiry = self._config["encoding"]["timestamper"].format(later)
