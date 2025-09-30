@@ -7,12 +7,10 @@ as well as the AccessVerifier class for verifying authenticated requests.
 
 from __future__ import annotations
 
-from typing import Any, Generic, TypedDict, TypeVar
+from typing import TypedDict, TypeVar
 
 from better_auth.exceptions import (
     AuthenticationError,
-    InvalidMessageError,
-    VerificationError,
 )
 from better_auth.interfaces.crypto import (
     IHasher,

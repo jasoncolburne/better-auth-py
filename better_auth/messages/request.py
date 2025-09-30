@@ -7,7 +7,7 @@ requests with access control information (nonce) and signature support.
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Dict, Generic, Optional, Type, TypeVar
+from typing import Any, Callable, Dict, Generic, TypeVar
 
 from better_auth.messages.message import SignableMessage
 

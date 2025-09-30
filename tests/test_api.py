@@ -13,8 +13,7 @@ This module tests the complete authentication lifecycle including:
 
 from __future__ import annotations
 
-import json
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 import pytest
 
