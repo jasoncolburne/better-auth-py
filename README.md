@@ -4,6 +4,9 @@ Python implementation of [better-auth](https://github.com/jasoncolburne/better-a
 
 Better-auth is designed to be agnostic of encoding, cryptographic choice, and storage mechanism. It simply composes cryptographic and storage interfaces that you provide. In-memory/software examples exist in the test directory.
 
+Disclaimer: Anthropic's Claude wrote this whole readme and library, porting it from the
+[typescript](https://github.com/jasoncolburne/better-auth-ts) implementation.
+
 ## Features
 
 - **Agnostic Design**: Bring your own cryptography, storage, and encoding implementations
