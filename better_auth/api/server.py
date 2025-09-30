@@ -7,8 +7,9 @@ as well as the AccessVerifier class for verifying authenticated requests.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import timedelta
-from typing import TypedDict, TypeVar
+from typing import TypeVar
 
 from better_auth.exceptions import (
     AuthenticationError,
@@ -55,7 +56,8 @@ T = TypeVar("T")
 U = TypeVar("U")
 
 
-class KeyPairConfig(TypedDict):
+@dataclass
+class KeyPairConfig:
     """Configuration for server key pairs.
 
     Attributes:
@@ -67,7 +69,8 @@ class KeyPairConfig(TypedDict):
     access: ISigningKey
 
 
-class CryptoConfig(TypedDict):
+@dataclass
+class CryptoConfig:
     """Configuration for cryptographic operations.
 
     Attributes:
@@ -81,7 +84,8 @@ class CryptoConfig(TypedDict):
     verifier: IVerifier
 
 
-class EncodingConfig(TypedDict):
+@dataclass
+class EncodingConfig:
     """Configuration for encoding and time operations.
 
     Attributes:
@@ -95,7 +99,8 @@ class EncodingConfig(TypedDict):
     token_encoder: ITokenEncoder
 
 
-class ExpiryConfig(TypedDict):
+@dataclass
+class ExpiryConfig:
     """Configuration for token expiration periods.
 
     Attributes:
@@ -107,7 +112,8 @@ class ExpiryConfig(TypedDict):
     refresh_in_hours: int
 
 
-class AccessStoreConfig(TypedDict):
+@dataclass
+class AccessStoreConfig:
     """Configuration for access-related storage.
 
     Attributes:
@@ -117,7 +123,8 @@ class AccessStoreConfig(TypedDict):
     key_hash: IServerTimeLockStore
 
 
-class AuthenticationStoreConfig(TypedDict):
+@dataclass
+class AuthenticationStoreConfig:
     """Configuration for authentication-related storage.
 
     Attributes:
@@ -129,7 +136,8 @@ class AuthenticationStoreConfig(TypedDict):
     nonce: IServerAuthenticationNonceStore
 
 
-class RecoveryStoreConfig(TypedDict):
+@dataclass
+class RecoveryStoreConfig:
     """Configuration for recovery-related storage.
 
     Attributes:
@@ -139,7 +147,8 @@ class RecoveryStoreConfig(TypedDict):
     hash: IServerRecoveryHashStore
 
 
-class StoreConfig(TypedDict):
+@dataclass
+class StoreConfig:
     """Configuration for server-side storage interfaces.
 
     Attributes:
@@ -153,7 +162,8 @@ class StoreConfig(TypedDict):
     recovery: RecoveryStoreConfig
 
 
-class BetterAuthServerConfig(TypedDict):
+@dataclass
+class BetterAuthServerConfig:
     """Configuration for BetterAuthServer.
 
     Attributes:
@@ -204,8 +214,8 @@ class BetterAuthServer:
         Returns:
             The hex-encoded hash of the response public key.
         """
-        response_public_key = await self._config["crypto"]["key_pair"]["response"].public()
-        return await self._config["crypto"]["hasher"].sum(response_public_key)
+        response_public_key = await self._config.crypto.key_pair.response.public()
+        return await self._config.crypto.hasher.sum(response_public_key)
 
     async def create_account(self, message: str) -> str:
         """Create a new account with initial device registration.
@@ -231,31 +241,31 @@ class BetterAuthServer:
         """
         request = CreationRequest.parse(message)
         await request.verify(
-            self._config["crypto"]["verifier"],
+            self._config.crypto.verifier,
             request.payload["request"]["authentication"]["publicKey"],
         )
 
         identity = request.payload["request"]["authentication"]["identity"]
 
-        await self._config["encoding"]["identity_verifier"].verify(
+        await self._config.encoding.identity_verifier.verify(
             identity,
             request.payload["request"]["authentication"]["publicKey"],
             request.payload["request"]["authentication"]["rotationHash"],
             request.payload["request"]["authentication"]["recoveryHash"],
         )
 
-        device_hash = await self._config["crypto"]["hasher"].sum(
+        device_hash = await self._config.crypto.hasher.sum(
             request.payload["request"]["authentication"]["publicKey"]
         )
 
         if device_hash != request.payload["request"]["authentication"]["device"]:
             raise AuthenticationError("malformed device")
 
-        await self._config["store"]["recovery"]["hash"].register(
+        await self._config.store.recovery.hash.register(
             identity, request.payload["request"]["authentication"]["recoveryHash"]
         )
 
-        await self._config["store"]["authentication"]["key"].register(
+        await self._config.store.authentication.key.register(
             identity,
             request.payload["request"]["authentication"]["device"],
             request.payload["request"]["authentication"]["publicKey"],
@@ -267,7 +277,7 @@ class BetterAuthServer:
             {}, await self._response_key_hash(), request.payload["access"]["nonce"]
         )
 
-        await response.sign(self._config["crypto"]["key_pair"]["response"])
+        await response.sign(self._config.crypto.key_pair.response)
 
         return await response.serialize()
 
@@ -295,18 +305,18 @@ class BetterAuthServer:
         """
         request = LinkDeviceRequest.parse(message)
 
-        public_key = await self._config["store"]["authentication"]["key"].public(
+        public_key = await self._config.store.authentication.key.public(
             request.payload["request"]["authentication"]["identity"],
             request.payload["request"]["authentication"]["device"],
         )
 
-        await request.verify(self._config["crypto"]["verifier"], public_key)
+        await request.verify(self._config.crypto.verifier, public_key)
 
         link_container = LinkContainer(request.payload["request"]["link"]["payload"])
         link_container.signature = request.payload["request"]["link"]["signature"]
 
         await link_container.verify(
-            self._config["crypto"]["verifier"],
+            self._config.crypto.verifier,
             link_container.payload["authentication"]["publicKey"],
         )
 
@@ -316,7 +326,7 @@ class BetterAuthServer:
         ):
             raise AuthenticationError("mismatched identities")
 
-        await self._config["store"]["authentication"]["key"].register(
+        await self._config.store.authentication.key.register(
             link_container.payload["authentication"]["identity"],
             link_container.payload["authentication"]["device"],
             link_container.payload["authentication"]["publicKey"],
@@ -328,7 +338,7 @@ class BetterAuthServer:
             {}, await self._response_key_hash(), request.payload["access"]["nonce"]
         )
 
-        await response.sign(self._config["crypto"]["key_pair"]["response"])
+        await response.sign(self._config.crypto.key_pair.response)
 
         return await response.serialize()
 
@@ -355,11 +365,11 @@ class BetterAuthServer:
         """
         request = RotateAuthenticationKeyRequest.parse(message)
         await request.verify(
-            self._config["crypto"]["verifier"],
+            self._config.crypto.verifier,
             request.payload["request"]["authentication"]["publicKey"],
         )
 
-        await self._config["store"]["authentication"]["key"].rotate(
+        await self._config.store.authentication.key.rotate(
             request.payload["request"]["authentication"]["identity"],
             request.payload["request"]["authentication"]["device"],
             request.payload["request"]["authentication"]["publicKey"],
@@ -370,7 +380,7 @@ class BetterAuthServer:
             {}, await self._response_key_hash(), request.payload["access"]["nonce"]
         )
 
-        await response.sign(self._config["crypto"]["key_pair"]["response"])
+        await response.sign(self._config.crypto.key_pair.response)
 
         return await response.serialize()
 
@@ -392,7 +402,7 @@ class BetterAuthServer:
         """
         request = StartAuthenticationRequest.parse(message)
 
-        nonce = await self._config["store"]["authentication"]["nonce"].generate(
+        nonce = await self._config.store.authentication.nonce.generate(
             request.payload["request"]["authentication"]["identity"]
         )
 
@@ -406,7 +416,7 @@ class BetterAuthServer:
             request.payload["access"]["nonce"],
         )
 
-        await response.sign(self._config["crypto"]["key_pair"]["response"])
+        await response.sign(self._config.crypto.key_pair.response)
 
         return await response.serialize()
 
@@ -431,25 +441,25 @@ class BetterAuthServer:
             AuthenticationError: If nonce validation fails.
         """
         request = FinishAuthenticationRequest.parse(message)
-        identity = await self._config["store"]["authentication"]["nonce"].validate(
+        identity = await self._config.store.authentication.nonce.validate(
             request.payload["request"]["authentication"]["nonce"]
         )
 
-        authentication_public_key = await self._config["store"]["authentication"]["key"].public(
+        authentication_public_key = await self._config.store.authentication.key.public(
             identity, request.payload["request"]["authentication"]["device"]
         )
-        await request.verify(self._config["crypto"]["verifier"], authentication_public_key)
+        await request.verify(self._config.crypto.verifier, authentication_public_key)
 
-        now = self._config["encoding"]["timestamper"].now()
-        later = self._config["encoding"]["timestamper"].parse(now)
-        even_later = self._config["encoding"]["timestamper"].parse(now)
+        now = self._config.encoding.timestamper.now()
+        later = self._config.encoding.timestamper.parse(now)
+        even_later = self._config.encoding.timestamper.parse(now)
 
-        later += timedelta(minutes=self._config["expiry"]["access_in_minutes"])
-        even_later += timedelta(hours=self._config["expiry"]["refresh_in_hours"])
+        later += timedelta(minutes=self._config.expiry.access_in_minutes)
+        even_later += timedelta(hours=self._config.expiry.refresh_in_hours)
 
-        issued_at = self._config["encoding"]["timestamper"].format(now)
-        expiry = self._config["encoding"]["timestamper"].format(later)
-        refresh_expiry = self._config["encoding"]["timestamper"].format(even_later)
+        issued_at = self._config.encoding.timestamper.format(now)
+        expiry = self._config.encoding.timestamper.format(later)
+        refresh_expiry = self._config.encoding.timestamper.format(even_later)
 
         access_token = AccessToken[T](
             identity,
@@ -461,8 +471,8 @@ class BetterAuthServer:
             attributes,
         )
 
-        await access_token.sign(self._config["crypto"]["key_pair"]["access"])
-        token = await access_token.serialize_token(self._config["encoding"]["token_encoder"])
+        await access_token.sign(self._config.crypto.key_pair.access)
+        token = await access_token.serialize_token(self._config.encoding.token_encoder)
 
         response = FinishAuthenticationResponse(
             {
@@ -474,7 +484,7 @@ class BetterAuthServer:
             request.payload["access"]["nonce"],
         )
 
-        await response.sign(self._config["crypto"]["key_pair"]["response"])
+        await response.sign(self._config.crypto.key_pair.response)
 
         return await response.serialize()
 
@@ -502,40 +512,40 @@ class BetterAuthServer:
         """
         request = RefreshAccessTokenRequest.parse(message)
         await request.verify(
-            self._config["crypto"]["verifier"], request.payload["request"]["access"]["publicKey"]
+            self._config.crypto.verifier, request.payload["request"]["access"]["publicKey"]
         )
 
         token_string = request.payload["request"]["access"]["token"]
         token = await AccessToken.parse(
             token_string,
-            self._config["crypto"]["key_pair"]["access"].verifier().signature_length,
-            self._config["encoding"]["token_encoder"],
+            self._config.crypto.key_pair.access.verifier().signature_length,
+            self._config.encoding.token_encoder,
         )
         await token.verify_token(
-            self._config["crypto"]["verifier"],
-            await self._config["crypto"]["key_pair"]["access"].public(),
-            self._config["encoding"]["timestamper"],
+            self._config.crypto.verifier,
+            await self._config.crypto.key_pair.access.public(),
+            self._config.encoding.timestamper,
         )
 
-        hash_value = await self._config["crypto"]["hasher"].sum(
+        hash_value = await self._config.crypto.hasher.sum(
             request.payload["request"]["access"]["publicKey"]
         )
         if hash_value != token.rotation_hash:
             raise AuthenticationError("hash mismatch")
 
-        now = self._config["encoding"]["timestamper"].now()
-        refresh_expiry = self._config["encoding"]["timestamper"].parse(token.refresh_expiry)
+        now = self._config.encoding.timestamper.now()
+        refresh_expiry = self._config.encoding.timestamper.parse(token.refresh_expiry)
 
         if now > refresh_expiry:
             raise AuthenticationError("refresh has expired")
 
-        await self._config["store"]["access"]["key_hash"].reserve(hash_value)
+        await self._config.store.access.key_hash.reserve(hash_value)
 
-        later = self._config["encoding"]["timestamper"].parse(now)
-        later += timedelta(minutes=self._config["expiry"]["access_in_minutes"])
+        later = self._config.encoding.timestamper.parse(now)
+        later += timedelta(minutes=self._config.expiry.access_in_minutes)
 
-        issued_at = self._config["encoding"]["timestamper"].format(now)
-        expiry = self._config["encoding"]["timestamper"].format(later)
+        issued_at = self._config.encoding.timestamper.format(now)
+        expiry = self._config.encoding.timestamper.format(later)
 
         access_token = AccessToken(
             token.identity,
@@ -547,10 +557,8 @@ class BetterAuthServer:
             token.attributes,
         )
 
-        await access_token.sign(self._config["crypto"]["key_pair"]["access"])
-        serialized_token = await access_token.serialize_token(
-            self._config["encoding"]["token_encoder"]
-        )
+        await access_token.sign(self._config.crypto.key_pair.access)
+        serialized_token = await access_token.serialize_token(self._config.encoding.token_encoder)
 
         response = RefreshAccessTokenResponse(
             {
@@ -562,7 +570,7 @@ class BetterAuthServer:
             request.payload["access"]["nonce"],
         )
 
-        await response.sign(self._config["crypto"]["key_pair"]["response"])
+        await response.sign(self._config.crypto.key_pair.response)
 
         return await response.serialize()
 
@@ -588,18 +596,18 @@ class BetterAuthServer:
         """
         request = RecoverAccountRequest.parse(message)
         await request.verify(
-            self._config["crypto"]["verifier"],
+            self._config.crypto.verifier,
             request.payload["request"]["authentication"]["recoveryKey"],
         )
 
-        hash_value = await self._config["crypto"]["hasher"].sum(
+        hash_value = await self._config.crypto.hasher.sum(
             request.payload["request"]["authentication"]["recoveryKey"]
         )
-        await self._config["store"]["recovery"]["hash"].validate(
+        await self._config.store.recovery.hash.validate(
             request.payload["request"]["authentication"]["identity"], hash_value
         )
 
-        await self._config["store"]["authentication"]["key"].register(
+        await self._config.store.authentication.key.register(
             request.payload["request"]["authentication"]["identity"],
             request.payload["request"]["authentication"]["device"],
             request.payload["request"]["authentication"]["publicKey"],
@@ -611,12 +619,13 @@ class BetterAuthServer:
             {}, await self._response_key_hash(), request.payload["access"]["nonce"]
         )
 
-        await response.sign(self._config["crypto"]["key_pair"]["response"])
+        await response.sign(self._config.crypto.key_pair.response)
 
         return await response.serialize()
 
 
-class AccessPublicKeyConfig(TypedDict):
+@dataclass
+class AccessPublicKeyConfig:
     """Configuration for access verification public key.
 
     Attributes:
@@ -626,7 +635,8 @@ class AccessPublicKeyConfig(TypedDict):
     access: IVerificationKey
 
 
-class AccessVerifierCryptoConfig(TypedDict):
+@dataclass
+class AccessVerifierCryptoConfig:
     """Configuration for access verifier cryptographic operations.
 
     Attributes:
@@ -638,7 +648,8 @@ class AccessVerifierCryptoConfig(TypedDict):
     verifier: IVerifier
 
 
-class AccessVerifierEncodingConfig(TypedDict):
+@dataclass
+class AccessVerifierEncodingConfig:
     """Configuration for access verifier encoding operations.
 
     Attributes:
@@ -650,7 +661,8 @@ class AccessVerifierEncodingConfig(TypedDict):
     timestamper: ITimestamper
 
 
-class AccessVerifierStoreConfig(TypedDict):
+@dataclass
+class AccessVerifierStoreConfig:
     """Configuration for access verifier storage.
 
     Attributes:
@@ -660,7 +672,8 @@ class AccessVerifierStoreConfig(TypedDict):
     nonce: IServerTimeLockStore
 
 
-class AccessVerifierStorageConfig(TypedDict):
+@dataclass
+class AccessVerifierStorageConfig:
     """Configuration for access verifier storage interfaces.
 
     Attributes:
@@ -670,7 +683,8 @@ class AccessVerifierStorageConfig(TypedDict):
     access: AccessVerifierStoreConfig
 
 
-class AccessVerifierConfig(TypedDict):
+@dataclass
+class AccessVerifierConfig:
     """Configuration for AccessVerifier.
 
     Attributes:
@@ -733,10 +747,10 @@ class AccessVerifier:
         """
         request = AccessRequest.parse(message)
         return await request._verify(
-            self._config["store"]["access"]["nonce"],
-            self._config["crypto"]["verifier"],
-            self._config["crypto"]["public_key"]["access"].verifier(),
-            await self._config["crypto"]["public_key"]["access"].public(),
-            self._config["encoding"]["token_encoder"],
-            self._config["encoding"]["timestamper"],
+            self._config.store.access.nonce,
+            self._config.crypto.verifier,
+            self._config.crypto.public_key.access.verifier(),
+            await self._config.crypto.public_key.access.public(),
+            self._config.encoding.token_encoder,
+            self._config.encoding.timestamper,
         )
