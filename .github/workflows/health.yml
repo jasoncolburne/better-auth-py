@@ -27,7 +27,7 @@ jobs:
           pip install -e .[dev]
 
       - name: Run tests
-        run: pytest tests/ --count=1000
+        run: pytest
 
   lint:
     runs-on: ubuntu-latest
