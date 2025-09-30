@@ -10,8 +10,6 @@ from datetime import timedelta
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any, Callable, Dict, TypedDict
 
-sys.path.insert(0, "/Users/jason/github.com/jasoncolburne/better-auth-py")
-
 from better_auth import AccessVerifier, BetterAuthServer, BetterAuthServerConfig
 from better_auth.api.server import (
     AccessPublicKeyConfig,
@@ -30,9 +28,9 @@ from better_auth.api.server import (
     StoreConfig,
 )
 from better_auth.messages import AccessRequest, ServerResponse
-from examples.implementation.crypto import Hasher, Noncer, Secp256r1, Secp256r1Verifier
-from examples.implementation.encoding import IdentityVerifier, Rfc3339Nano, TokenEncoder
-from examples.implementation.storage import (
+from .implementation.crypto import Hasher, Noncer, Secp256r1, Secp256r1Verifier
+from .implementation.encoding import IdentityVerifier, Rfc3339Nano, TokenEncoder
+from .implementation.storage import (
     ServerAuthenticationKeyStore,
     ServerAuthenticationNonceStore,
     ServerRecoveryHashStore,
