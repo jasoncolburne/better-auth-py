@@ -140,9 +140,7 @@ class IServerAuthenticationKeyStore(Protocol):
         """
         ...
 
-    async def rotate(
-        self, identity: str, device: str, current: str, rotation_hash: str
-    ) -> None:
+    async def rotate(self, identity: str, device: str, current: str, rotation_hash: str) -> None:
         """Rotate a key for an identity and device.
 
         Args:

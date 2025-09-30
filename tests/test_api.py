@@ -148,9 +148,7 @@ class MockNetworkServer(INetwork):
         self.paths = paths
         self.hasher = hasher
 
-    async def respond_to_access_request(
-        self, message: str, nonce: str | None = None
-    ) -> str:
+    async def respond_to_access_request(self, message: str, nonce: str | None = None) -> str:
         """Generate a signed response to an access request.
 
         Args:
@@ -238,18 +236,14 @@ class MockNetworkServer(INetwork):
             return await self.better_auth_server.start_authentication(message)
 
         elif path == self.paths["authenticate"]["finish"]:
-            return await self.better_auth_server.finish_authentication(
-                message, self.attributes
-            )
+            return await self.better_auth_server.finish_authentication(message, self.attributes)
 
         elif path == self.paths["rotate"]["access"]:
             return await self.better_auth_server.refresh_access_token(message)
 
         elif path == "/foo/bar":
             # Test endpoint for successful access
-            access_identity, attributes = await self.access_verifier.verify(
-                message
-            )
+            access_identity, attributes = await self.access_verifier.verify(message)
 
             if access_identity is None:
                 raise RuntimeError("null identity")
@@ -267,9 +261,7 @@ class MockNetworkServer(INetwork):
 
         elif path == "/bad/nonce":
             # Test endpoint for nonce mismatch detection
-            access_identity, attributes = await self.access_verifier.verify(
-                message
-            )
+            access_identity, attributes = await self.access_verifier.verify(message)
 
             if access_identity is None:
                 raise RuntimeError("null identity")
@@ -284,9 +276,7 @@ class MockNetworkServer(INetwork):
                 raise RuntimeError("attributes do not match")
 
             # Return response with wrong nonce
-            return await self.respond_to_access_request(
-                message, "0A0123456789abcdefghijkl"
-            )
+            return await self.respond_to_access_request(message, "0A0123456789abcdefghijkl")
 
         else:
             raise ValueError(f"unexpected path: {path}")
@@ -373,9 +363,7 @@ async def create_server(
     hasher = Hasher()
     noncer = Noncer()
 
-    access_key_hash_store = ServerTimeLockStore(
-        60 * 60 * expiry["refresh_lifetime_in_hours"]
-    )
+    access_key_hash_store = ServerTimeLockStore(60 * 60 * expiry["refresh_lifetime_in_hours"])
     authentication_nonce_store = ServerAuthenticationNonceStore(
         expiry["authentication_challenge_lifetime_in_seconds"]
     )
@@ -766,14 +754,10 @@ async def test_recovers_from_loss(
     identity = await better_auth_client.identity()
 
     # Recover account on new device
-    await recovered_better_auth_client.recover_account(
-        identity, crypto_keys["recovery_signer"]
-    )
+    await recovered_better_auth_client.recover_account(identity, crypto_keys["recovery_signer"])
 
     # Test full flow on recovered device
-    await execute_flow(
-        recovered_better_auth_client, ecc_verifier, crypto_keys
-    )
+    await execute_flow(recovered_better_auth_client, ecc_verifier, crypto_keys)
 
 
 @pytest.mark.asyncio
@@ -883,9 +867,7 @@ async def test_links_another_device(
     await better_auth_client.link_device(link_container)
 
     # Test full flow on linked device
-    await execute_flow(
-        linked_better_auth_client, ecc_verifier, crypto_keys
-    )
+    await execute_flow(linked_better_auth_client, ecc_verifier, crypto_keys)
 
 
 @pytest.mark.asyncio
@@ -968,9 +950,7 @@ async def test_rejects_expired_authentication_challenges(
     await better_auth_client.create_account(recovery_hash)
 
     with pytest.raises(Exception) as exc_info:
-        await execute_flow(
-            better_auth_client, ecc_verifier, crypto_keys
-        )
+        await execute_flow(better_auth_client, ecc_verifier, crypto_keys)
 
     assert "expired nonce" in str(exc_info.value)
 
@@ -1055,9 +1035,7 @@ async def test_rejects_expired_refresh_tokens(
     await better_auth_client.create_account(recovery_hash)
 
     with pytest.raises(Exception) as exc_info:
-        await execute_flow(
-            better_auth_client, ecc_verifier, crypto_keys
-        )
+        await execute_flow(better_auth_client, ecc_verifier, crypto_keys)
 
     assert "refresh has expired" in str(exc_info.value)
 
@@ -1142,9 +1120,7 @@ async def test_rejects_expired_access_tokens(
     await better_auth_client.create_account(recovery_hash)
 
     with pytest.raises(Exception) as exc_info:
-        await execute_flow(
-            better_auth_client, ecc_verifier, crypto_keys
-        )
+        await execute_flow(better_auth_client, ecc_verifier, crypto_keys)
 
     assert "token expired" in str(exc_info.value)
 

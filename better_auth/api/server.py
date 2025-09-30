@@ -52,8 +52,8 @@ from better_auth.messages import (
 )
 
 # Type variable for custom token attributes
-T = TypeVar('T')
-U = TypeVar('U')
+T = TypeVar("T")
+U = TypeVar("U")
 
 
 class KeyPairConfig(TypedDict):
@@ -233,7 +233,7 @@ class BetterAuthServer:
         request = CreationRequest.parse(message)
         await request.verify(
             self._config["crypto"]["verifier"],
-            request.payload["request"]["authentication"]["publicKey"]
+            request.payload["request"]["authentication"]["publicKey"],
         )
 
         identity = request.payload["request"]["authentication"]["identity"]
@@ -242,7 +242,7 @@ class BetterAuthServer:
             identity,
             request.payload["request"]["authentication"]["publicKey"],
             request.payload["request"]["authentication"]["rotationHash"],
-            request.payload["request"]["authentication"]["recoveryHash"]
+            request.payload["request"]["authentication"]["recoveryHash"],
         )
 
         device_hash = await self._config["crypto"]["hasher"].sum(
@@ -253,8 +253,7 @@ class BetterAuthServer:
             raise AuthenticationError("malformed device")
 
         await self._config["store"]["recovery"]["hash"].register(
-            identity,
-            request.payload["request"]["authentication"]["recoveryHash"]
+            identity, request.payload["request"]["authentication"]["recoveryHash"]
         )
 
         await self._config["store"]["authentication"]["key"].register(
@@ -262,13 +261,11 @@ class BetterAuthServer:
             request.payload["request"]["authentication"]["device"],
             request.payload["request"]["authentication"]["publicKey"],
             request.payload["request"]["authentication"]["rotationHash"],
-            False
+            False,
         )
 
         response = CreationResponse(
-            {},
-            await self._response_key_hash(),
-            request.payload["access"]["nonce"]
+            {}, await self._response_key_hash(), request.payload["access"]["nonce"]
         )
 
         await response.sign(self._config["crypto"]["key_pair"]["response"])
@@ -301,7 +298,7 @@ class BetterAuthServer:
 
         public_key = await self._config["store"]["authentication"]["key"].public(
             request.payload["request"]["authentication"]["identity"],
-            request.payload["request"]["authentication"]["device"]
+            request.payload["request"]["authentication"]["device"],
         )
 
         await request.verify(self._config["crypto"]["verifier"], public_key)
@@ -311,7 +308,7 @@ class BetterAuthServer:
 
         await link_container.verify(
             self._config["crypto"]["verifier"],
-            link_container.payload["authentication"]["publicKey"]
+            link_container.payload["authentication"]["publicKey"],
         )
 
         if (
@@ -325,13 +322,11 @@ class BetterAuthServer:
             link_container.payload["authentication"]["device"],
             link_container.payload["authentication"]["publicKey"],
             link_container.payload["authentication"]["rotationHash"],
-            True
+            True,
         )
 
         response = LinkDeviceResponse(
-            {},
-            await self._response_key_hash(),
-            request.payload["access"]["nonce"]
+            {}, await self._response_key_hash(), request.payload["access"]["nonce"]
         )
 
         await response.sign(self._config["crypto"]["key_pair"]["response"])
@@ -362,20 +357,18 @@ class BetterAuthServer:
         request = RotateAuthenticationKeyRequest.parse(message)
         await request.verify(
             self._config["crypto"]["verifier"],
-            request.payload["request"]["authentication"]["publicKey"]
+            request.payload["request"]["authentication"]["publicKey"],
         )
 
         await self._config["store"]["authentication"]["key"].rotate(
             request.payload["request"]["authentication"]["identity"],
             request.payload["request"]["authentication"]["device"],
             request.payload["request"]["authentication"]["publicKey"],
-            request.payload["request"]["authentication"]["rotationHash"]
+            request.payload["request"]["authentication"]["rotationHash"],
         )
 
         response = RotateAuthenticationKeyResponse(
-            {},
-            await self._response_key_hash(),
-            request.payload["access"]["nonce"]
+            {}, await self._response_key_hash(), request.payload["access"]["nonce"]
         )
 
         await response.sign(self._config["crypto"]["key_pair"]["response"])
@@ -411,7 +404,7 @@ class BetterAuthServer:
                 },
             },
             await self._response_key_hash(),
-            request.payload["access"]["nonce"]
+            request.payload["access"]["nonce"],
         )
 
         await response.sign(self._config["crypto"]["key_pair"]["response"])
@@ -444,8 +437,7 @@ class BetterAuthServer:
         )
 
         authentication_public_key = await self._config["store"]["authentication"]["key"].public(
-            identity,
-            request.payload["request"]["authentication"]["device"]
+            identity, request.payload["request"]["authentication"]["device"]
         )
         await request.verify(self._config["crypto"]["verifier"], authentication_public_key)
 
@@ -457,7 +449,9 @@ class BetterAuthServer:
         even_later_hours = even_later.hour + self._config["expiry"]["refresh_in_hours"]
 
         later = later.replace(minute=later_minutes % 60, hour=later.hour + later_minutes // 60)
-        even_later = even_later.replace(hour=even_later_hours % 24, day=even_later.day + even_later_hours // 24)
+        even_later = even_later.replace(
+            hour=even_later_hours % 24, day=even_later.day + even_later_hours // 24
+        )
 
         issued_at = self._config["encoding"]["timestamper"].format(now)
         expiry = self._config["encoding"]["timestamper"].format(later)
@@ -470,7 +464,7 @@ class BetterAuthServer:
             issued_at,
             expiry,
             refresh_expiry,
-            attributes
+            attributes,
         )
 
         await access_token.sign(self._config["crypto"]["key_pair"]["access"])
@@ -483,7 +477,7 @@ class BetterAuthServer:
                 },
             },
             await self._response_key_hash(),
-            request.payload["access"]["nonce"]
+            request.payload["access"]["nonce"],
         )
 
         await response.sign(self._config["crypto"]["key_pair"]["response"])
@@ -514,20 +508,19 @@ class BetterAuthServer:
         """
         request = RefreshAccessTokenRequest.parse(message)
         await request.verify(
-            self._config["crypto"]["verifier"],
-            request.payload["request"]["access"]["publicKey"]
+            self._config["crypto"]["verifier"], request.payload["request"]["access"]["publicKey"]
         )
 
         token_string = request.payload["request"]["access"]["token"]
         token = await AccessToken.parse(
             token_string,
             self._config["crypto"]["key_pair"]["access"].verifier().signature_length,
-            self._config["encoding"]["token_encoder"]
+            self._config["encoding"]["token_encoder"],
         )
         await token.verify_token(
             self._config["crypto"]["verifier"],
             await self._config["crypto"]["key_pair"]["access"].public(),
-            self._config["encoding"]["timestamper"]
+            self._config["encoding"]["timestamper"],
         )
 
         hash_value = await self._config["crypto"]["hasher"].sum(
@@ -558,7 +551,7 @@ class BetterAuthServer:
             issued_at,
             expiry,
             token.refresh_expiry,
-            token.attributes
+            token.attributes,
         )
 
         await access_token.sign(self._config["crypto"]["key_pair"]["access"])
@@ -573,7 +566,7 @@ class BetterAuthServer:
                 },
             },
             await self._response_key_hash(),
-            request.payload["access"]["nonce"]
+            request.payload["access"]["nonce"],
         )
 
         await response.sign(self._config["crypto"]["key_pair"]["response"])
@@ -603,15 +596,14 @@ class BetterAuthServer:
         request = RecoverAccountRequest.parse(message)
         await request.verify(
             self._config["crypto"]["verifier"],
-            request.payload["request"]["authentication"]["recoveryKey"]
+            request.payload["request"]["authentication"]["recoveryKey"],
         )
 
         hash_value = await self._config["crypto"]["hasher"].sum(
             request.payload["request"]["authentication"]["recoveryKey"]
         )
         await self._config["store"]["recovery"]["hash"].validate(
-            request.payload["request"]["authentication"]["identity"],
-            hash_value
+            request.payload["request"]["authentication"]["identity"], hash_value
         )
 
         await self._config["store"]["authentication"]["key"].register(
@@ -619,13 +611,11 @@ class BetterAuthServer:
             request.payload["request"]["authentication"]["device"],
             request.payload["request"]["authentication"]["publicKey"],
             request.payload["request"]["authentication"]["rotationHash"],
-            True
+            True,
         )
 
         response = RecoverAccountResponse(
-            {},
-            await self._response_key_hash(),
-            request.payload["access"]["nonce"]
+            {}, await self._response_key_hash(), request.payload["access"]["nonce"]
         )
 
         await response.sign(self._config["crypto"]["key_pair"]["response"])
@@ -755,5 +745,5 @@ class AccessVerifier:
             self._config["crypto"]["public_key"]["access"].verifier(),
             await self._config["crypto"]["public_key"]["access"].public(),
             self._config["encoding"]["token_encoder"],
-            self._config["encoding"]["timestamper"]
+            self._config["encoding"]["timestamper"],
         )

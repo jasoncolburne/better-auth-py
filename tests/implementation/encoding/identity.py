@@ -65,7 +65,7 @@ class IdentityVerifier(IIdentityVerifier):
             ... )
         """
         # Build the suffix from extra_data if provided
-        suffix = ''
+        suffix = ""
         if extra_data is not None:
             suffix = extra_data
 
@@ -74,4 +74,4 @@ class IdentityVerifier(IIdentityVerifier):
 
         # Verify that the computed hash matches the provided identity
         if identity_hash != identity:
-            raise Exception('could not verify identity')
+            raise Exception("could not verify identity")

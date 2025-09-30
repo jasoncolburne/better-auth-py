@@ -10,7 +10,7 @@ from datetime import timedelta
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any, Callable, Dict, TypedDict
 
-sys.path.insert(0, '/Users/jason/github.com/jasoncolburne/better-auth-py')
+sys.path.insert(0, "/Users/jason/github.com/jasoncolburne/better-auth-py")
 
 from better_auth import AccessVerifier, BetterAuthServer, BetterAuthServerConfig
 from better_auth.messages import AccessRequest, ServerResponse
@@ -26,17 +26,20 @@ from tests.implementation.storage import (
 
 class MockTokenAttributes(TypedDict):
     """Mock token attributes for testing."""
+
     permissionsByRole: Dict[str, list[str]]
 
 
 class MockRequestPayload(TypedDict):
     """Mock request payload."""
+
     foo: str
     bar: str
 
 
 class MockResponsePayload(TypedDict):
     """Mock response payload."""
+
     wasFoo: str
     wasBar: str
 
@@ -154,7 +157,7 @@ class Server:
             A tuple of (status_code, response_body).
         """
         try:
-            message = body.decode('utf-8')
+            message = body.decode("utf-8")
             reply = await logic(message)
             return (200, reply)
         except Exception as e:
@@ -179,6 +182,7 @@ class Server:
 
     async def finish_authentication(self, body: bytes) -> tuple[int, str]:
         """Handle authentication finish requests."""
+
         async def handler(message: str) -> str:
             return await self.ba.finish_authentication(
                 message,
@@ -201,6 +205,7 @@ class Server:
 
     async def response_key(self, body: bytes) -> tuple[int, str]:
         """Handle server response key requests."""
+
         async def handler(message: str) -> str:
             return await self.server_response_key.public()
 
@@ -254,6 +259,7 @@ class Server:
 
     async def foo_bar(self, body: bytes) -> tuple[int, str]:
         """Handle foo/bar test requests."""
+
         async def handler(message: str) -> str:
             return await self._respond_to_access_request(message, False)
 
@@ -261,6 +267,7 @@ class Server:
 
     async def bad_nonce(self, body: bytes) -> tuple[int, str]:
         """Handle bad nonce test requests."""
+
         async def handler(message: str) -> str:
             return await self._respond_to_access_request(message, True)
 
@@ -276,21 +283,21 @@ class RequestHandler(BaseHTTPRequestHandler):
         """Handle POST requests."""
         import asyncio
 
-        content_length = int(self.headers.get('Content-Length', 0))
+        content_length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_length)
 
         # Route the request
         routes = {
-            '/register/create': self.server_instance.create,
-            '/register/recover': self.server_instance.recover,
-            '/register/link': self.server_instance.link,
-            '/authenticate/start': self.server_instance.start_authentication,
-            '/authenticate/finish': self.server_instance.finish_authentication,
-            '/rotate/authentication': self.server_instance.rotate_authentication,
-            '/rotate/access': self.server_instance.rotate_access,
-            '/key/response': self.server_instance.response_key,
-            '/foo/bar': self.server_instance.foo_bar,
-            '/bad/nonce': self.server_instance.bad_nonce,
+            "/register/create": self.server_instance.create,
+            "/register/recover": self.server_instance.recover,
+            "/register/link": self.server_instance.link,
+            "/authenticate/start": self.server_instance.start_authentication,
+            "/authenticate/finish": self.server_instance.finish_authentication,
+            "/rotate/authentication": self.server_instance.rotate_authentication,
+            "/rotate/access": self.server_instance.rotate_access,
+            "/key/response": self.server_instance.response_key,
+            "/foo/bar": self.server_instance.foo_bar,
+            "/bad/nonce": self.server_instance.bad_nonce,
         }
 
         handler = routes.get(self.path)
@@ -298,10 +305,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             try:
                 status_code, response = asyncio.run(handler(body))
                 self.send_response(status_code)
-                self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
-                self.wfile.write(response.encode('utf-8'))
+                self.wfile.write(response.encode("utf-8"))
             except Exception as e:
                 print(f"Request handling error: {e}", file=sys.stderr)
                 self.send_response(500)
@@ -313,9 +320,9 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self) -> None:
         """Handle OPTIONS requests for CORS."""
         self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
     def log_message(self, format: str, *args: Any) -> None:
@@ -327,11 +334,12 @@ def main() -> None:
     """Start the server."""
     server_instance = Server()
     import asyncio
+
     asyncio.run(server_instance._initialize_keys())
 
     RequestHandler.server_instance = server_instance
 
-    httpd = HTTPServer(('localhost', 8080), RequestHandler)
+    httpd = HTTPServer(("localhost", 8080), RequestHandler)
     print("Server running on http://localhost:8080")
     try:
         httpd.serve_forever()
@@ -340,5 +348,5 @@ def main() -> None:
         httpd.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

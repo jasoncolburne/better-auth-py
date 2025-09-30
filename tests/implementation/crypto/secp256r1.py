@@ -9,7 +9,10 @@ from typing import Optional
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature, encode_dss_signature
+from cryptography.hazmat.primitives.asymmetric.utils import (
+    decode_dss_signature,
+    encode_dss_signature,
+)
 from cryptography.hazmat.backends import default_backend
 
 from better_auth.interfaces.crypto import ISigningKey, IVerifier
@@ -59,10 +62,12 @@ class Secp256r1Verifier(IVerifier):
 
             # Convert raw 64-byte signature (r || s) to ASN.1 DER format
             if len(raw_signature) != 64:
-                raise ValueError(f"invalid signature length: expected 64 bytes, got {len(raw_signature)}")
+                raise ValueError(
+                    f"invalid signature length: expected 64 bytes, got {len(raw_signature)}"
+                )
 
-            r = int.from_bytes(raw_signature[:32], byteorder='big')
-            s = int.from_bytes(raw_signature[32:], byteorder='big')
+            r = int.from_bytes(raw_signature[:32], byteorder="big")
+            s = int.from_bytes(raw_signature[32:], byteorder="big")
             der_signature = encode_dss_signature(r, s)
 
             message_bytes = message.encode("utf-8")
@@ -123,8 +128,8 @@ class Secp256r1(ISigningKey):
         r, s = decode_dss_signature(der_signature)
 
         # Convert r and s to 32-byte big-endian format (raw 64-byte signature)
-        r_bytes = r.to_bytes(32, byteorder='big')
-        s_bytes = s.to_bytes(32, byteorder='big')
+        r_bytes = r.to_bytes(32, byteorder="big")
+        s_bytes = s.to_bytes(32, byteorder="big")
         signature_bytes = r_bytes + s_bytes
 
         # Pad with 2 zero bytes at the beginning for CESR encoding

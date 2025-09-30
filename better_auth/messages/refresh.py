@@ -32,11 +32,7 @@ class RefreshAccessTokenRequest(ClientRequest[Dict[str, Any]]):
         signature: Optional cryptographic signature.
     """
 
-    def __init__(
-        self,
-        request: Dict[str, Any],
-        nonce: str
-    ) -> None:
+    def __init__(self, request: Dict[str, Any], nonce: str) -> None:
         """Initialize a refresh access token request.
 
         Args:
@@ -81,12 +77,7 @@ class RefreshAccessTokenResponse(ServerResponse[Dict[str, Any]]):
         signature: Optional cryptographic signature.
     """
 
-    def __init__(
-        self,
-        response: Dict[str, Any],
-        response_key_hash: str,
-        nonce: str
-    ) -> None:
+    def __init__(self, response: Dict[str, Any], response_key_hash: str, nonce: str) -> None:
         """Initialize a refresh access token response.
 
         Args:
