@@ -801,7 +801,9 @@ async def test_recovers_from_loss(
     next_recovery_hash = await hasher.sum(await next_recovery_signer.public())
 
     # Recover account on new device
-    await recovered_better_auth_client.recover_account(identity, crypto_keys["recovery_signer"], next_recovery_hash)
+    await recovered_better_auth_client.recover_account(
+        identity, crypto_keys["recovery_signer"], next_recovery_hash
+    )
 
     # Test full flow on recovered device
     await execute_flow(recovered_better_auth_client, ecc_verifier, crypto_keys)
