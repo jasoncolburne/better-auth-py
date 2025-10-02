@@ -132,6 +132,41 @@ class ServerAuthenticationKeyStore(IServerAuthenticationKeyStore):
 
         return bundle[0]
 
+    async def revoke_device(self, identity: str, device: str) -> None:
+        """Revoke a specific device for an identity.
+
+        Args:
+            identity: The identity to revoke the device for.
+            device: The device identifier to revoke.
+
+        Raises:
+            RuntimeError: If identity+device combination not found.
+        """
+        token = identity + device
+        bundle = self._data_by_token.get(token)
+
+        if bundle is None:
+            raise RuntimeError("not found")
+
+        del self._data_by_token[token]
+
+    async def revoke_devices(self, identity: str) -> None:
+        """Revoke all devices for an identity.
+
+        Args:
+            identity: The identity to revoke all devices for.
+
+        Raises:
+            RuntimeError: If identity not found.
+        """
+        if identity not in self._identities:
+            raise RuntimeError("identity not found")
+
+        # Remove all device tokens for this identity
+        tokens_to_remove = [token for token in self._data_by_token if token.startswith(identity)]
+        for token in tokens_to_remove:
+            del self._data_by_token[token]
+
 
 class ServerRecoveryHashStore(IServerRecoveryHashStore):
     """In-memory implementation of recovery hash storage for servers.

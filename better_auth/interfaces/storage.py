@@ -167,6 +167,29 @@ class IServerAuthenticationKeyStore(Protocol):
         """
         ...
 
+    async def revoke_device(self, identity: str, device: str) -> None:
+        """Revoke a specific device for an identity.
+
+        Args:
+            identity: The identity to revoke the device for.
+            device: The device identifier to revoke.
+
+        Raises:
+            Exception: If identity and device combination does not exist.
+        """
+        ...
+
+    async def revoke_devices(self, identity: str) -> None:
+        """Revoke all devices for an identity.
+
+        Args:
+            identity: The identity to revoke all devices for.
+
+        Raises:
+            Exception: If identity does not exist.
+        """
+        ...
+
 
 class IServerRecoveryHashStore(Protocol):
     """Interface for server-side recovery hash storage."""

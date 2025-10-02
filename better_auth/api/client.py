@@ -403,12 +403,17 @@ class BetterAuthClient:
         container = LinkContainer.parse(link_container)
         nonce = await self.args.crypto.noncer.generate128()
 
+        # Rotate authentication key
+        public_key, rotation_hash = await self.args.store.key.authentication.rotate()
+
         # Create and sign the request
         request = LinkDeviceRequest(
             {
                 "authentication": {
                     "device": await self.args.store.identifier.device.get(),
                     "identity": await self.args.store.identifier.identity.get(),
+                    "publicKey": public_key,
+                    "rotationHash": rotation_hash,
                 },
                 "link": {
                     "payload": container.payload,
@@ -653,12 +658,14 @@ class BetterAuthClient:
         nonce = await self.args.crypto.noncer.generate128()
 
         # Create and sign the request with recovery key
+        recovery_hash = await self.args.crypto.hasher.sum(await recovery_key.public())
         request = RecoverAccountRequest(
             {
                 "authentication": {
                     "device": device,
                     "identity": identity,
                     "publicKey": current,
+                    "recoveryHash": recovery_hash,
                     "recoveryKey": await recovery_key.public(),
                     "rotationHash": rotation_hash,
                 }

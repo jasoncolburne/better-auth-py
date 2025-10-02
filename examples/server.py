@@ -188,6 +188,10 @@ class Server:
         """Handle device linking requests."""
         return await self._wrap_response(body, self.ba.link_device)
 
+    async def unlink(self, body: bytes) -> tuple[int, str]:
+        """Handle device unlinking requests."""
+        return await self._wrap_response(body, self.ba.unlink_device)
+
     async def start_authentication(self, body: bytes) -> tuple[int, str]:
         """Handle authentication start requests."""
         return await self._wrap_response(body, self.ba.start_authentication)
@@ -295,13 +299,14 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         # Route the request
         routes = {
-            "/register/create": self.server_instance.create,
-            "/register/recover": self.server_instance.recover,
-            "/register/link": self.server_instance.link,
+            "/account/create": self.server_instance.create,
             "/authenticate/start": self.server_instance.start_authentication,
             "/authenticate/finish": self.server_instance.finish_authentication,
             "/rotate/authentication": self.server_instance.rotate_authentication,
             "/rotate/access": self.server_instance.rotate_access,
+            "/rotate/link": self.server_instance.link,
+            "/rotate/unlink": self.server_instance.unlink,
+            "/rotate/recover": self.server_instance.recover,
             "/key/response": self.server_instance.response_key,
             "/foo/bar": self.server_instance.foo_bar,
             "/bad/nonce": self.server_instance.bad_nonce,

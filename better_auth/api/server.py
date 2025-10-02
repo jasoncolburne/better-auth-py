@@ -49,6 +49,8 @@ from better_auth.messages import (
     RotateAuthenticationKeyResponse,
     StartAuthenticationRequest,
     StartAuthenticationResponse,
+    UnlinkDeviceRequest,
+    UnlinkDeviceResponse,
 )
 
 # Type variable for custom token attributes
@@ -286,11 +288,12 @@ class BetterAuthServer:
 
         This method:
         1. Parses and verifies the link device request
-        2. Retrieves the requesting device's public key
-        3. Verifies the link container signature
-        4. Validates identity consistency
-        5. Registers the new device
-        6. Returns a signed response
+        2. Rotates the authentication key for the requesting device
+        3. Retrieves the requesting device's public key
+        4. Verifies the link container signature
+        5. Validates identity consistency
+        6. Registers the new device
+        7. Returns a signed response
 
         Args:
             message: Serialized LinkDeviceRequest from the client.
@@ -304,6 +307,13 @@ class BetterAuthServer:
             AuthenticationError: If identities don't match.
         """
         request = LinkDeviceRequest.parse(message)
+
+        await self._config.store.authentication.key.rotate(
+            request.payload["request"]["authentication"]["identity"],
+            request.payload["request"]["authentication"]["device"],
+            request.payload["request"]["authentication"]["publicKey"],
+            request.payload["request"]["authentication"]["rotationHash"],
+        )
 
         public_key = await self._config.store.authentication.key.public(
             request.payload["request"]["authentication"]["identity"],
@@ -335,6 +345,55 @@ class BetterAuthServer:
         )
 
         response = LinkDeviceResponse(
+            {}, await self._response_key_hash(), request.payload["access"]["nonce"]
+        )
+
+        await response.sign(self._config.crypto.key_pair.response)
+
+        return await response.serialize()
+
+    async def unlink_device(self, message: str) -> str:
+        """Unlink a device from an existing account.
+
+        This method:
+        1. Parses and verifies the unlink device request
+        2. Rotates the authentication key for the requesting device
+        3. Retrieves the requesting device's public key
+        4. Revokes the device
+        5. Returns a signed response
+
+        Args:
+            message: Serialized UnlinkDeviceRequest from the client.
+
+        Returns:
+            Serialized UnlinkDeviceResponse signed by the server.
+
+        Raises:
+            InvalidMessageError: If the message is malformed.
+            VerificationError: If signature verification fails.
+        """
+        request = UnlinkDeviceRequest.parse(message)
+
+        await self._config.store.authentication.key.rotate(
+            request.payload["request"]["authentication"]["identity"],
+            request.payload["request"]["authentication"]["device"],
+            request.payload["request"]["authentication"]["publicKey"],
+            None,
+        )
+
+        public_key = await self._config.store.authentication.key.public(
+            request.payload["request"]["authentication"]["identity"],
+            request.payload["request"]["authentication"]["device"],
+        )
+
+        await request.verify(self._config.crypto.verifier, public_key)
+
+        await self._config.store.authentication.key.revoke_device(
+            request.payload["request"]["authentication"]["identity"],
+            request.payload["request"]["authentication"]["device"],
+        )
+
+        response = UnlinkDeviceResponse(
             {}, await self._response_key_hash(), request.payload["access"]["nonce"]
         )
 
@@ -580,8 +639,9 @@ class BetterAuthServer:
         This method:
         1. Parses and verifies the recovery request
         2. Validates the recovery key hash
-        3. Registers a new device with the account
-        4. Returns a signed response
+        3. Revokes all existing devices
+        4. Registers a new device with the account
+        5. Returns a signed response
 
         Args:
             message: Serialized RecoverAccountRequest from the client.
@@ -605,6 +665,10 @@ class BetterAuthServer:
         )
         await self._config.store.recovery.hash.validate(
             request.payload["request"]["authentication"]["identity"], hash_value
+        )
+
+        await self._config.store.authentication.key.revoke_devices(
+            request.payload["request"]["authentication"]["identity"]
         )
 
         await self._config.store.authentication.key.register(

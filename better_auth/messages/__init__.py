@@ -16,6 +16,8 @@ from better_auth.messages.linking import (
     LinkContainer,
     LinkDeviceRequest,
     LinkDeviceResponse,
+    UnlinkDeviceRequest,
+    UnlinkDeviceResponse,
 )
 from better_auth.messages.message import SerializableMessage, SignableMessage
 from better_auth.messages.recovery import RecoverAccountRequest, RecoverAccountResponse
@@ -52,6 +54,8 @@ __all__ = [
     "LinkContainer",
     "LinkDeviceRequest",
     "LinkDeviceResponse",
+    "UnlinkDeviceRequest",
+    "UnlinkDeviceResponse",
     # Recovery
     "RecoverAccountRequest",
     "RecoverAccountResponse",
