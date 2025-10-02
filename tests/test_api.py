@@ -796,8 +796,12 @@ async def test_recovers_from_loss(
     await better_auth_client.create_account(recovery_hash)
     identity = await better_auth_client.identity()
 
+    next_recovery_signer = Secp256r1()
+    await next_recovery_signer.generate()
+    next_recovery_hash = await hasher.sum(await next_recovery_signer.public())
+
     # Recover account on new device
-    await recovered_better_auth_client.recover_account(identity, crypto_keys["recovery_signer"])
+    await recovered_better_auth_client.recover_account(identity, crypto_keys["recovery_signer"], next_recovery_hash)
 
     # Test full flow on recovered device
     await execute_flow(recovered_better_auth_client, ecc_verifier, crypto_keys)

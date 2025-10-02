@@ -627,7 +627,7 @@ class BetterAuthClient:
         # Store new access token
         await self.args.store.token.access.store(response.payload["response"]["access"]["token"])
 
-    async def recover_account(self, identity: str, recovery_key: ISigningKey) -> None:
+    async def recover_account(self, identity: str, recovery_key: ISigningKey, recovery_hash: str) -> None:
         """Recover an account using the recovery key.
 
         This method allows account recovery when all devices are lost or
@@ -657,8 +657,6 @@ class BetterAuthClient:
         device = await self.args.crypto.hasher.sum(current)
         nonce = await self.args.crypto.noncer.generate128()
 
-        # Create and sign the request with recovery key
-        recovery_hash = await self.args.crypto.hasher.sum(await recovery_key.public())
         request = RecoverAccountRequest(
             {
                 "authentication": {
