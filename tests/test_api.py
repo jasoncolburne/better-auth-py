@@ -262,7 +262,7 @@ class MockNetworkServer(INetwork):
 
         elif path == self.paths["rotate"]["link"]:
             return await self.better_auth_server.link_device(message)
-        
+
         elif path == self.paths["rotate"]["unlink"]:
             return await self.better_auth_server.unlink_device(message)
 
