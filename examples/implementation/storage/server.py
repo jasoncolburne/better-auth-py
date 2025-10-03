@@ -82,7 +82,7 @@ class ServerAuthenticationKeyStore(IServerAuthenticationKeyStore):
         self._identities.add(identity)
         self._data_by_token[token] = (public_key, rotation_hash)
 
-    async def rotate(self, identity: str, device: str, current: str, rotation_hash: str) -> None:
+    async def rotate(self, identity: str, device: str, public_key: str, rotation_hash: str) -> None:
         """Rotate a key for an identity and device.
 
         Validates that the current public key matches the hash of the previously
@@ -91,7 +91,7 @@ class ServerAuthenticationKeyStore(IServerAuthenticationKeyStore):
         Args:
             identity: The identity to rotate keys for.
             device: The device identifier.
-            current: The new current public key.
+            public_key: The new current public key.
             rotation_hash: The new rotation hash.
 
         Raises:
@@ -104,12 +104,12 @@ class ServerAuthenticationKeyStore(IServerAuthenticationKeyStore):
         if bundle is None:
             raise RuntimeError("not found")
 
-        cesr_hash = await self._hasher.sum(current)
+        cesr_hash = await self._hasher.sum(public_key)
 
         if bundle[1] != cesr_hash:
             raise RuntimeError("invalid forward secret")
 
-        self._data_by_token[token] = (current, rotation_hash)
+        self._data_by_token[token] = (public_key, rotation_hash)
 
     async def public(self, identity: str, device: str) -> str:
         """Get the current public key for an identity and device.

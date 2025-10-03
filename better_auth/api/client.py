@@ -576,14 +576,14 @@ class BetterAuthClient:
 
         # Phase 2: Finish authentication
         # Initialize access keys
-        _, current_key, next_key_hash = await self.args.store.key.access.initialize()
+        _, public_key, rotation_hash = await self.args.store.key.access.initialize()
         finish_nonce = await self.args.crypto.noncer.generate128()
 
         finish_request = FinishAuthenticationRequest(
             {
                 "access": {
-                    "publicKey": current_key,
-                    "rotationHash": next_key_hash,
+                    "publicKey": public_key,
+                    "rotationHash": rotation_hash,
                 },
                 "authentication": {
                     "device": await self.args.store.identifier.device.get(),
@@ -695,8 +695,8 @@ class BetterAuthClient:
             NetworkError: If network communication fails.
         """
         # Initialize new authentication keys
-        _, current, rotation_hash = await self.args.store.key.authentication.initialize()
-        device = await self.args.crypto.hasher.sum(current)
+        _, public_key, rotation_hash = await self.args.store.key.authentication.initialize()
+        device = await self.args.crypto.hasher.sum(public_key)
         nonce = await self.args.crypto.noncer.generate128()
 
         request = RecoverAccountRequest(
@@ -704,7 +704,7 @@ class BetterAuthClient:
                 "authentication": {
                     "device": device,
                     "identity": identity,
-                    "publicKey": current,
+                    "publicKey": public_key,
                     "recoveryHash": recovery_hash,
                     "recoveryKey": await recovery_key.public(),
                     "rotationHash": rotation_hash,
