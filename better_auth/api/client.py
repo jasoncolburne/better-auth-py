@@ -443,6 +443,10 @@ class BetterAuthClient:
         public_key, rotation_hash = await self.args.store.key.authentication.rotate()
         nonce = await self.args.crypto.noncer.generate128()
 
+        if device == await self.args.store.identifier.device.get():
+            # if we are disabling this device, prevent rotation but allow traceability
+            rotation_hash = await self.args.crypto.hasher.sum(rotation_hash)
+
         request = UnlinkDeviceRequest(
             {
                 "authentication": {
