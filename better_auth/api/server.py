@@ -661,7 +661,7 @@ class BetterAuthServer:
         await self._config.store.recovery.hash.rotate(
             request.payload["request"]["authentication"]["identity"],
             hash_value,
-            request.payload["request"]["authentication"]["recoveryHash"]
+            request.payload["request"]["authentication"]["recoveryHash"],
         )
 
         await self._config.store.authentication.key.revoke_devices(
