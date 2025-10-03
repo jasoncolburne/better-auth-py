@@ -378,7 +378,7 @@ class BetterAuthServer:
             request.payload["request"]["authentication"]["identity"],
             request.payload["request"]["authentication"]["device"],
             request.payload["request"]["authentication"]["publicKey"],
-            None,
+            request.payload["request"]["authentication"]["rotationHash"],
         )
 
         public_key = await self._config.store.authentication.key.public(
@@ -390,7 +390,7 @@ class BetterAuthServer:
 
         await self._config.store.authentication.key.revoke_device(
             request.payload["request"]["authentication"]["identity"],
-            request.payload["request"]["authentication"]["device"],
+            request.payload["request"]["link"]["device"],
         )
 
         response = UnlinkDeviceResponse(
