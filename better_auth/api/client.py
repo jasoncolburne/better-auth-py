@@ -439,9 +439,10 @@ class BetterAuthClient:
             raise AuthenticationError("incorrect nonce")
 
     async def unlink_device(self, device: str) -> None:
+        nonce = await self.args.crypto.noncer.generate128()
+
         # Rotate keys
         public_key, rotation_hash = await self.args.store.key.authentication.rotate()
-        nonce = await self.args.crypto.noncer.generate128()
 
         if device == await self.args.store.identifier.device.get():
             # if we are disabling this device, prevent rotation but allow traceability
