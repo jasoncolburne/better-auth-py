@@ -203,7 +203,7 @@ class IServerRecoveryHashStore(Protocol):
         """
         ...
 
-    async def validate(self, identity: str, key_hash: str) -> None:
+    async def rotate(self, identity: str, old_hash: str, new_hash: str) -> None:
         """Validate a recovery hash for an identity.
 
         Args:

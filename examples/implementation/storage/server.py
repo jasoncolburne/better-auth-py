@@ -199,7 +199,7 @@ class ServerRecoveryHashStore(IServerRecoveryHashStore):
 
         self._data_by_identity[identity] = key_hash
 
-    async def validate(self, identity: str, key_hash: str) -> None:
+    async def rotate(self, identity: str, old_hash: str, new_hash: str) -> None:
         """Validate a recovery hash for an identity.
 
         Args:
@@ -215,8 +215,10 @@ class ServerRecoveryHashStore(IServerRecoveryHashStore):
         if stored is None:
             raise RuntimeError("not found")
 
-        if stored != key_hash:
+        if stored != old_hash:
             raise RuntimeError("incorrect hash")
+
+        self._data_by_identity[identity] = new_hash
 
 
 class ServerAuthenticationNonceStore(IServerAuthenticationNonceStore):

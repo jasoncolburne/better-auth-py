@@ -658,8 +658,10 @@ class BetterAuthServer:
         hash_value = await self._config.crypto.hasher.sum(
             request.payload["request"]["authentication"]["recoveryKey"]
         )
-        await self._config.store.recovery.hash.validate(
-            request.payload["request"]["authentication"]["identity"], hash_value
+        await self._config.store.recovery.hash.rotate(
+            request.payload["request"]["authentication"]["identity"],
+            hash_value,
+            request.payload["request"]["authentication"]["recoveryHash"]
         )
 
         await self._config.store.authentication.key.revoke_devices(
