@@ -309,7 +309,7 @@ class BetterAuthServer:
         request = LinkDeviceRequest.parse(message)
 
         await request.verify(
-            self._config.crypto.verifier, 
+            self._config.crypto.verifier,
             request.payload["request"]["authentication"]["publicKey"],
         )
 
@@ -373,8 +373,7 @@ class BetterAuthServer:
         request = UnlinkDeviceRequest.parse(message)
 
         await request.verify(
-            self._config.crypto.verifier,
-            request.payload["request"]["authentication"]["publicKey"]
+            self._config.crypto.verifier, request.payload["request"]["authentication"]["publicKey"]
         )
 
         await self._config.store.authentication.key.rotate(
