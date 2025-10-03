@@ -381,12 +381,10 @@ class BetterAuthServer:
             request.payload["request"]["authentication"]["rotationHash"],
         )
 
-        public_key = await self._config.store.authentication.key.public(
-            request.payload["request"]["authentication"]["identity"],
-            request.payload["request"]["authentication"]["device"],
+        await request.verify(
+            self._config.crypto.verifier,
+            request.payload["request"]["authentication"]["publicKey"]
         )
-
-        await request.verify(self._config.crypto.verifier, public_key)
 
         await self._config.store.authentication.key.revoke_device(
             request.payload["request"]["authentication"]["identity"],
