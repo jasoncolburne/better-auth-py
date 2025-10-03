@@ -308,13 +308,6 @@ class BetterAuthServer:
         """
         request = LinkDeviceRequest.parse(message)
 
-        await self._config.store.authentication.key.rotate(
-            request.payload["request"]["authentication"]["identity"],
-            request.payload["request"]["authentication"]["device"],
-            request.payload["request"]["authentication"]["publicKey"],
-            request.payload["request"]["authentication"]["rotationHash"],
-        )
-
         await request.verify(
             self._config.crypto.verifier, 
             request.payload["request"]["authentication"]["publicKey"],
@@ -333,6 +326,13 @@ class BetterAuthServer:
             != request.payload["request"]["authentication"]["identity"]
         ):
             raise AuthenticationError("mismatched identities")
+
+        await self._config.store.authentication.key.rotate(
+            request.payload["request"]["authentication"]["identity"],
+            request.payload["request"]["authentication"]["device"],
+            request.payload["request"]["authentication"]["publicKey"],
+            request.payload["request"]["authentication"]["rotationHash"],
+        )
 
         await self._config.store.authentication.key.register(
             link_container.payload["authentication"]["identity"],
@@ -372,16 +372,16 @@ class BetterAuthServer:
         """
         request = UnlinkDeviceRequest.parse(message)
 
+        await request.verify(
+            self._config.crypto.verifier,
+            request.payload["request"]["authentication"]["publicKey"]
+        )
+
         await self._config.store.authentication.key.rotate(
             request.payload["request"]["authentication"]["identity"],
             request.payload["request"]["authentication"]["device"],
             request.payload["request"]["authentication"]["publicKey"],
             request.payload["request"]["authentication"]["rotationHash"],
-        )
-
-        await request.verify(
-            self._config.crypto.verifier,
-            request.payload["request"]["authentication"]["publicKey"]
         )
 
         await self._config.store.authentication.key.revoke_device(
