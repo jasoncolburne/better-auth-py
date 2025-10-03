@@ -20,8 +20,6 @@ class RegisterPathsDict(TypedDict):
     """Registration endpoint paths."""
 
     create: str
-    link: str
-    recover: str
 
 
 class RotatePathsDict(TypedDict):
@@ -29,6 +27,9 @@ class RotatePathsDict(TypedDict):
 
     authentication: str
     access: str
+    link: str
+    unlink: str
+    recover: str
 
 
 class IAuthenticationPaths(Protocol):
@@ -44,7 +45,7 @@ class IAuthenticationPaths(Protocol):
         ...
 
     @property
-    def register(self) -> RegisterPathsDict:
+    def account(self) -> RegisterPathsDict:
         """Registration endpoint paths.
 
         Returns:
@@ -76,7 +77,7 @@ class AuthenticatePaths:
 
 
 @dataclass
-class RegisterPaths:
+class AccountPaths:
     """Registration endpoint paths.
 
     Attributes:
@@ -86,8 +87,6 @@ class RegisterPaths:
     """
 
     create: str
-    link: str
-    recover: str
 
 
 @dataclass
@@ -101,6 +100,9 @@ class RotatePaths:
 
     authentication: str
     access: str
+    link: str
+    unlink: str
+    recover: str
 
 
 @dataclass
@@ -114,5 +116,5 @@ class AuthenticationPaths:
     """
 
     authenticate: AuthenticatePaths
-    register: RegisterPaths
+    account: AccountPaths
     rotate: RotatePaths

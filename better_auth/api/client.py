@@ -40,6 +40,8 @@ from better_auth.messages import (
     ScannableResponse,
     StartAuthenticationRequest,
     StartAuthenticationResponse,
+    UnlinkDeviceRequest,
+    UnlinkDeviceResponse,
 )
 
 
@@ -315,7 +317,7 @@ class BetterAuthClient:
         message = await request.serialize()
 
         # Send request and parse response
-        reply = await self.args.io.network.send_request(self.args.paths.register.create, message)
+        reply = await self.args.io.network.send_request(self.args.paths.account.create, message)
 
         response = CreationResponse.parse(reply)
         await self._verify_response(response, response.payload["access"]["responseKeyHash"])
@@ -427,9 +429,42 @@ class BetterAuthClient:
         message = await request.serialize()
 
         # Send request and parse response
-        reply = await self.args.io.network.send_request(self.args.paths.register.link, message)
+        reply = await self.args.io.network.send_request(self.args.paths.rotate.link, message)
 
         response = LinkDeviceResponse.parse(reply)
+        await self._verify_response(response, response.payload["access"]["responseKeyHash"])
+
+        # Verify nonce matches
+        if response.payload["access"]["nonce"] != nonce:
+            raise AuthenticationError("incorrect nonce")
+
+    async def unlink_device(self, device: str) -> None:
+        # Rotate keys
+        public_key, rotation_hash = await self.args.store.key.authentication.rotate()
+        nonce = await self.args.crypto.noncer.generate128()
+
+        request = UnlinkDeviceRequest(
+            {
+                "authentication": {
+                    "device": await self.args.store.identifier.device.get(),
+                    "identity": await self.args.store.identifier.identity.get(),
+                    "publicKey": public_key,
+                    "rotationHash": rotation_hash,
+                },
+                "link": {
+                    "device": device,
+                },
+            },
+            nonce,
+        )
+
+        await request.sign(await self.args.store.key.authentication.signer())
+        message = await request.serialize()
+
+        # Send request and parse response
+        reply = await self.args.io.network.send_request(self.args.paths.rotate.unlink, message)
+
+        response = UnlinkDeviceResponse.parse(reply)
         await self._verify_response(response, response.payload["access"]["responseKeyHash"])
 
         # Verify nonce matches
@@ -677,7 +712,7 @@ class BetterAuthClient:
         message = await request.serialize()
 
         # Send request and parse response
-        reply = await self.args.io.network.send_request(self.args.paths.register.recover, message)
+        reply = await self.args.io.network.send_request(self.args.paths.rotate.recover, message)
 
         response = RecoverAccountResponse.parse(reply)
         await self._verify_response(response, response.payload["access"]["responseKeyHash"])

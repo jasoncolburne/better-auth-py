@@ -57,7 +57,7 @@ from better_auth.interfaces import (
     ISigningKey,
     IVerificationKey,
     IVerifier,
-    RegisterPaths,
+    AccountPaths,
     RotatePaths,
 )
 from better_auth.messages import AccessRequest, ServerResponse
@@ -81,10 +81,8 @@ DEBUG_LOGGING = False
 
 # Test authentication paths
 AUTHENTICATION_PATHS = {
-    "register": {
+    "account": {
         "create": "/register/create",
-        "link": "/register/link",
-        "recover": "/register/recover",
     },
     "authenticate": {
         "start": "/authenticate/start",
@@ -93,6 +91,9 @@ AUTHENTICATION_PATHS = {
     "rotate": {
         "authentication": "/rotate/authentication",
         "access": "/rotate/access",
+        "link": "/rotate/link",
+        "unlink": "/rotate/unlink",
+        "recover": "/rotate/recover",
     },
 }
 
@@ -253,14 +254,17 @@ class MockNetworkServer(INetwork):
             RuntimeError: If access verification fails.
         """
         # Route to appropriate server endpoint
-        if path == self.paths["register"]["create"]:
+        if path == self.paths["account"]["create"]:
             return await self.better_auth_server.create_account(message)
 
-        elif path == self.paths["register"]["recover"]:
+        elif path == self.paths["rotate"]["recover"]:
             return await self.better_auth_server.recover_account(message)
 
-        elif path == self.paths["register"]["link"]:
+        elif path == self.paths["rotate"]["link"]:
             return await self.better_auth_server.link_device(message)
+        
+        elif path == self.paths["rotate"]["unlink"]:
+            return await self.better_auth_server.unlink_device(message)
 
         elif path == self.paths["rotate"]["authentication"]:
             return await self.better_auth_server.rotate_authentication_key(message)
@@ -646,7 +650,7 @@ def better_auth_client(
         ),
         paths=AuthenticationPaths(
             authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
-            register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+            account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
             rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
         ),
         store=ClientStoreConfig(
@@ -735,7 +739,7 @@ async def test_recovers_from_loss(
             ),
             paths=AuthenticationPaths(
                 authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
-                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
             ),
             store=ClientStoreConfig(
@@ -772,7 +776,7 @@ async def test_recovers_from_loss(
             ),
             paths=AuthenticationPaths(
                 authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
-                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
             ),
             store=ClientStoreConfig(
@@ -854,7 +858,7 @@ async def test_links_another_device(
             ),
             paths=AuthenticationPaths(
                 authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
-                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
             ),
             store=ClientStoreConfig(
@@ -891,7 +895,7 @@ async def test_links_another_device(
             ),
             paths=AuthenticationPaths(
                 authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
-                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
             ),
             store=ClientStoreConfig(
@@ -925,6 +929,8 @@ async def test_links_another_device(
 
     # Test full flow on linked device
     await execute_flow(linked_better_auth_client, ecc_verifier, crypto_keys)
+
+    await linked_better_auth_client.unlink_device(await better_auth_client.device())
 
 
 @pytest.mark.asyncio
@@ -988,7 +994,7 @@ async def test_rejects_expired_authentication_challenges(
             ),
             paths=AuthenticationPaths(
                 authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
-                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
             ),
             store=ClientStoreConfig(
@@ -1077,7 +1083,7 @@ async def test_rejects_expired_refresh_tokens(
             ),
             paths=AuthenticationPaths(
                 authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
-                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
             ),
             store=ClientStoreConfig(
@@ -1166,7 +1172,7 @@ async def test_rejects_expired_access_tokens(
             ),
             paths=AuthenticationPaths(
                 authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
-                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
             ),
             store=ClientStoreConfig(
@@ -1236,7 +1242,7 @@ async def test_detects_tampered_access_tokens(
             ),
             paths=AuthenticationPaths(
                 authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
-                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
             ),
             store=ClientStoreConfig(
@@ -1317,7 +1323,7 @@ async def test_detects_mismatched_access_nonce(
             ),
             paths=AuthenticationPaths(
                 authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
-                register=RegisterPaths(**AUTHENTICATION_PATHS["register"]),
+                account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
             ),
             store=ClientStoreConfig(
