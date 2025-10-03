@@ -40,6 +40,8 @@ from better_auth.messages import (
     ScannableResponse,
     StartAuthenticationRequest,
     StartAuthenticationResponse,
+    UnlinkDeviceRequest,
+    UnlinkDeviceResponse,
 )
 
 
@@ -315,7 +317,7 @@ class BetterAuthClient:
         message = await request.serialize()
 
         # Send request and parse response
-        reply = await self.args.io.network.send_request(self.args.paths.register.create, message)
+        reply = await self.args.io.network.send_request(self.args.paths.account.create, message)
 
         response = CreationResponse.parse(reply)
         await self._verify_response(response, response.payload["access"]["responseKeyHash"])
@@ -403,12 +405,17 @@ class BetterAuthClient:
         container = LinkContainer.parse(link_container)
         nonce = await self.args.crypto.noncer.generate128()
 
+        # Rotate authentication key
+        public_key, rotation_hash = await self.args.store.key.authentication.rotate()
+
         # Create and sign the request
         request = LinkDeviceRequest(
             {
                 "authentication": {
                     "device": await self.args.store.identifier.device.get(),
                     "identity": await self.args.store.identifier.identity.get(),
+                    "publicKey": public_key,
+                    "rotationHash": rotation_hash,
                 },
                 "link": {
                     "payload": container.payload,
@@ -422,9 +429,47 @@ class BetterAuthClient:
         message = await request.serialize()
 
         # Send request and parse response
-        reply = await self.args.io.network.send_request(self.args.paths.register.link, message)
+        reply = await self.args.io.network.send_request(self.args.paths.rotate.link, message)
 
         response = LinkDeviceResponse.parse(reply)
+        await self._verify_response(response, response.payload["access"]["responseKeyHash"])
+
+        # Verify nonce matches
+        if response.payload["access"]["nonce"] != nonce:
+            raise AuthenticationError("incorrect nonce")
+
+    async def unlink_device(self, device: str) -> None:
+        nonce = await self.args.crypto.noncer.generate128()
+
+        # Rotate keys
+        public_key, rotation_hash = await self.args.store.key.authentication.rotate()
+
+        if device == await self.args.store.identifier.device.get():
+            # if we are disabling this device, prevent rotation but allow traceability
+            rotation_hash = await self.args.crypto.hasher.sum(rotation_hash)
+
+        request = UnlinkDeviceRequest(
+            {
+                "authentication": {
+                    "device": await self.args.store.identifier.device.get(),
+                    "identity": await self.args.store.identifier.identity.get(),
+                    "publicKey": public_key,
+                    "rotationHash": rotation_hash,
+                },
+                "link": {
+                    "device": device,
+                },
+            },
+            nonce,
+        )
+
+        await request.sign(await self.args.store.key.authentication.signer())
+        message = await request.serialize()
+
+        # Send request and parse response
+        reply = await self.args.io.network.send_request(self.args.paths.rotate.unlink, message)
+
+        response = UnlinkDeviceResponse.parse(reply)
         await self._verify_response(response, response.payload["access"]["responseKeyHash"])
 
         # Verify nonce matches
@@ -531,14 +576,14 @@ class BetterAuthClient:
 
         # Phase 2: Finish authentication
         # Initialize access keys
-        _, current_key, next_key_hash = await self.args.store.key.access.initialize()
+        _, public_key, rotation_hash = await self.args.store.key.access.initialize()
         finish_nonce = await self.args.crypto.noncer.generate128()
 
         finish_request = FinishAuthenticationRequest(
             {
                 "access": {
-                    "publicKey": current_key,
-                    "rotationHash": next_key_hash,
+                    "publicKey": public_key,
+                    "rotationHash": rotation_hash,
                 },
                 "authentication": {
                     "device": await self.args.store.identifier.device.get(),
@@ -622,7 +667,9 @@ class BetterAuthClient:
         # Store new access token
         await self.args.store.token.access.store(response.payload["response"]["access"]["token"])
 
-    async def recover_account(self, identity: str, recovery_key: ISigningKey) -> None:
+    async def recover_account(
+        self, identity: str, recovery_key: ISigningKey, recovery_hash: str
+    ) -> None:
         """Recover an account using the recovery key.
 
         This method allows account recovery when all devices are lost or
@@ -648,17 +695,17 @@ class BetterAuthClient:
             NetworkError: If network communication fails.
         """
         # Initialize new authentication keys
-        _, current, rotation_hash = await self.args.store.key.authentication.initialize()
-        device = await self.args.crypto.hasher.sum(current)
+        _, public_key, rotation_hash = await self.args.store.key.authentication.initialize()
+        device = await self.args.crypto.hasher.sum(public_key)
         nonce = await self.args.crypto.noncer.generate128()
 
-        # Create and sign the request with recovery key
         request = RecoverAccountRequest(
             {
                 "authentication": {
                     "device": device,
                     "identity": identity,
-                    "publicKey": current,
+                    "publicKey": public_key,
+                    "recoveryHash": recovery_hash,
                     "recoveryKey": await recovery_key.public(),
                     "rotationHash": rotation_hash,
                 }
@@ -670,7 +717,7 @@ class BetterAuthClient:
         message = await request.serialize()
 
         # Send request and parse response
-        reply = await self.args.io.network.send_request(self.args.paths.register.recover, message)
+        reply = await self.args.io.network.send_request(self.args.paths.rotate.recover, message)
 
         response = RecoverAccountResponse.parse(reply)
         await self._verify_response(response, response.payload["access"]["responseKeyHash"])

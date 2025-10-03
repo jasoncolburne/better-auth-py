@@ -82,7 +82,7 @@ class ServerAuthenticationKeyStore(IServerAuthenticationKeyStore):
         self._identities.add(identity)
         self._data_by_token[token] = (public_key, rotation_hash)
 
-    async def rotate(self, identity: str, device: str, current: str, rotation_hash: str) -> None:
+    async def rotate(self, identity: str, device: str, public_key: str, rotation_hash: str) -> None:
         """Rotate a key for an identity and device.
 
         Validates that the current public key matches the hash of the previously
@@ -91,7 +91,7 @@ class ServerAuthenticationKeyStore(IServerAuthenticationKeyStore):
         Args:
             identity: The identity to rotate keys for.
             device: The device identifier.
-            current: The new current public key.
+            public_key: The new current public key.
             rotation_hash: The new rotation hash.
 
         Raises:
@@ -104,12 +104,12 @@ class ServerAuthenticationKeyStore(IServerAuthenticationKeyStore):
         if bundle is None:
             raise RuntimeError("not found")
 
-        cesr_hash = await self._hasher.sum(current)
+        cesr_hash = await self._hasher.sum(public_key)
 
         if bundle[1] != cesr_hash:
             raise RuntimeError("invalid forward secret")
 
-        self._data_by_token[token] = (current, rotation_hash)
+        self._data_by_token[token] = (public_key, rotation_hash)
 
     async def public(self, identity: str, device: str) -> str:
         """Get the current public key for an identity and device.
@@ -131,6 +131,41 @@ class ServerAuthenticationKeyStore(IServerAuthenticationKeyStore):
             raise RuntimeError("not found")
 
         return bundle[0]
+
+    async def revoke_device(self, identity: str, device: str) -> None:
+        """Revoke a specific device for an identity.
+
+        Args:
+            identity: The identity to revoke the device for.
+            device: The device identifier to revoke.
+
+        Raises:
+            RuntimeError: If identity+device combination not found.
+        """
+        token = identity + device
+        bundle = self._data_by_token.get(token)
+
+        if bundle is None:
+            raise RuntimeError("not found")
+
+        del self._data_by_token[token]
+
+    async def revoke_devices(self, identity: str) -> None:
+        """Revoke all devices for an identity.
+
+        Args:
+            identity: The identity to revoke all devices for.
+
+        Raises:
+            RuntimeError: If identity not found.
+        """
+        if identity not in self._identities:
+            raise RuntimeError("identity not found")
+
+        # Remove all device tokens for this identity
+        tokens_to_remove = [token for token in self._data_by_token if token.startswith(identity)]
+        for token in tokens_to_remove:
+            del self._data_by_token[token]
 
 
 class ServerRecoveryHashStore(IServerRecoveryHashStore):
@@ -164,7 +199,7 @@ class ServerRecoveryHashStore(IServerRecoveryHashStore):
 
         self._data_by_identity[identity] = key_hash
 
-    async def validate(self, identity: str, key_hash: str) -> None:
+    async def rotate(self, identity: str, old_hash: str, new_hash: str) -> None:
         """Validate a recovery hash for an identity.
 
         Args:
@@ -180,8 +215,10 @@ class ServerRecoveryHashStore(IServerRecoveryHashStore):
         if stored is None:
             raise RuntimeError("not found")
 
-        if stored != key_hash:
+        if stored != old_hash:
             raise RuntimeError("incorrect hash")
+
+        self._data_by_identity[identity] = new_hash
 
 
 class ServerAuthenticationNonceStore(IServerAuthenticationNonceStore):

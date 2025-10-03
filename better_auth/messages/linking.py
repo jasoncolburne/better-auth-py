@@ -91,7 +91,9 @@ class LinkDeviceRequest(ClientRequest[Dict[str, Any]]):
     {
         "authentication": {
             "device": "<current_device_id>",
-            "identity": "<identity>"
+            "identity": "<identity>",
+            "publicKey": "<current_public_key>",
+            "rotationHash": "<current_rotation_hash>"
         },
         "link": {
             "payload": {
@@ -116,7 +118,8 @@ class LinkDeviceRequest(ClientRequest[Dict[str, Any]]):
 
         Args:
             request: Dictionary containing authentication and link data with keys:
-                - authentication: Dict containing current device and identity.
+                - authentication: Dict containing device, identity, publicKey,
+                  and rotationHash.
                 - link: LinkContainer data with new device credentials.
             nonce: The nonce for replay protection.
         """
@@ -175,3 +178,87 @@ class LinkDeviceResponse(ServerResponse[Dict[str, Any]]):
             KeyError: If required fields are missing from the message.
         """
         return ServerResponse._parse(message, LinkDeviceResponse)
+
+
+class UnlinkDeviceRequest(ClientRequest[Dict[str, Any]]):
+    """Request message for unlinking a device from an account.
+
+    This message removes a device's access to an account.
+
+    The request payload structure is:
+    {
+        "authentication": {
+            "device": "<device_id>",
+            "identity": "<identity>",
+            "publicKey": "<public_key>"
+        }
+    }
+
+    Attributes:
+        payload: Dictionary containing access metadata and authentication data.
+        signature: Optional cryptographic signature.
+    """
+
+    def __init__(self, request: Dict[str, Any], nonce: str) -> None:
+        """Initialize an unlink device request.
+
+        Args:
+            request: Dictionary containing authentication data with keys:
+                - authentication: Dict containing device, identity, and publicKey.
+            nonce: The nonce for replay protection.
+        """
+        super().__init__(request, nonce)
+
+    @staticmethod
+    def parse(message: str) -> UnlinkDeviceRequest:
+        """Parse a serialized unlink device request message.
+
+        Args:
+            message: The serialized JSON message string.
+
+        Returns:
+            A new UnlinkDeviceRequest instance with the parsed data and signature.
+
+        Raises:
+            json.JSONDecodeError: If the message is not valid JSON.
+            KeyError: If required fields are missing from the message.
+        """
+        return ClientRequest._parse(message, UnlinkDeviceRequest)
+
+
+class UnlinkDeviceResponse(ServerResponse[Dict[str, Any]]):
+    """Response message for device unlinking.
+
+    This message confirms successful device unlinking. The response payload
+    is an empty dictionary.
+
+    Attributes:
+        payload: Dictionary containing access metadata and empty response.
+        signature: Optional cryptographic signature.
+    """
+
+    def __init__(self, response: Dict[str, Any], response_key_hash: str, nonce: str) -> None:
+        """Initialize an unlink device response.
+
+        Args:
+            response: Empty dictionary response payload.
+            response_key_hash: Hash of the response key for verification.
+            nonce: The nonce for replay protection.
+        """
+        super().__init__(response, response_key_hash, nonce)
+
+    @staticmethod
+    def parse(message: str) -> UnlinkDeviceResponse:
+        """Parse a serialized unlink device response message.
+
+        Args:
+            message: The serialized JSON message string.
+
+        Returns:
+            A new UnlinkDeviceResponse instance with the parsed data and signature.
+
+        Raises:
+            json.JSONDecodeError: If the message is not valid JSON.
+            KeyError: If required fields are missing from the message.
+        """
+        return ServerResponse._parse(message, UnlinkDeviceResponse)

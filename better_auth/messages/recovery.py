@@ -24,6 +24,7 @@ class RecoverAccountRequest(ClientRequest[Dict[str, Any]]):
             "device": "<device_id>",
             "identity": "<identity>",
             "publicKey": "<new_public_key>",
+            "recoveryHash": "<recovery_hash>",
             "recoveryKey": "<recovery_key>",
             "rotationHash": "<new_rotation_hash>"
         }
@@ -40,7 +41,7 @@ class RecoverAccountRequest(ClientRequest[Dict[str, Any]]):
         Args:
             request: Dictionary containing authentication data with keys:
                 - authentication: Dict containing device, identity, publicKey,
-                  recoveryKey, and rotationHash.
+                  recoveryHash, recoveryKey, and rotationHash.
             nonce: The nonce for replay protection.
         """
         super().__init__(request, nonce)
