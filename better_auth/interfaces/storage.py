@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from .crypto import ISigningKey
+from .crypto import ISigningKey, IVerificationKey
 
 
 # Client interfaces
@@ -233,5 +233,23 @@ class IServerTimeLockStore(Protocol):
 
         Raises:
             Exception: If value is still alive in the store.
+        """
+        ...
+
+
+class IVerificationKeyStore(Protocol):
+    """Interface for verification key storage."""
+
+    async def get(self, identity: str) -> IVerificationKey:
+        """Get a verification key by identity.
+
+        Args:
+            identity: The identity to look up.
+
+        Returns:
+            The verification key for the identity.
+
+        Raises:
+            Exception: If identity is not found.
         """
         ...

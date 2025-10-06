@@ -39,11 +39,6 @@ class INoncer(Protocol):
 class IVerifier(Protocol):
     """Interface for signature verification."""
 
-    @property
-    def signature_length(self) -> int:
-        """The expected length of signatures in bytes."""
-        ...
-
     async def verify(self, message: str, signature: str, public_key: str) -> None:
         """Verify a signature against a message using a public key.
 
@@ -99,6 +94,14 @@ class ISigningKey(IVerificationKey, Protocol):
 
     Extends IVerificationKey with signing capabilities.
     """
+
+    async def identity(self) -> str:
+        """Fetch the identity (same as public key for secp256r1).
+
+        Returns:
+            The identity as a string.
+        """
+        ...
 
     async def sign(self, message: str) -> str:
         """Sign a message with the key it represents.

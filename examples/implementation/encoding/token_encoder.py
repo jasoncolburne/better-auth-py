@@ -101,3 +101,16 @@ class TokenEncoder(ITokenEncoder):
         object_string = object_bytes.decode("utf-8")
 
         return object_string
+
+    def signature_length(self, token: str) -> int:
+        """Get the signature length from a token.
+
+        For CESR secp256r1 signatures, the length is always 88 characters.
+
+        Args:
+            token: The token (unused but required by interface).
+
+        Returns:
+            The signature length (88 characters for secp256r1).
+        """
+        return 88

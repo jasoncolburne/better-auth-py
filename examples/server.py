@@ -12,7 +12,6 @@ from typing import Any, Callable, Dict, TypedDict
 
 from better_auth import AccessVerifier, BetterAuthServer, BetterAuthServerConfig
 from better_auth.api.server import (
-    AccessPublicKeyConfig,
     AccessStoreConfig,
     AccessVerifierConfig,
     AccessVerifierCryptoConfig,
@@ -35,6 +34,7 @@ from .implementation.storage import (
     ServerAuthenticationNonceStore,
     ServerRecoveryHashStore,
     ServerTimeLockStore,
+    VerificationKeyStore,
 )
 
 
@@ -130,13 +130,14 @@ class Server:
 
         self.ba = BetterAuthServer(self.server_config)
 
+        # Create access key store
+        self.access_key_store = VerificationKeyStore()
+
         # Create AccessVerifier
         self.av = AccessVerifier(
             AccessVerifierConfig(
                 crypto=AccessVerifierCryptoConfig(
-                    public_key=AccessPublicKeyConfig(
-                        access=self.server_access_key,
-                    ),
+                    access_key_store=self.access_key_store,
                     verifier=self.verifier,
                 ),
                 encoding=AccessVerifierEncodingConfig(
@@ -156,6 +157,9 @@ class Server:
         if not self._keys_initialized:
             await self.server_response_key.generate()
             await self.server_access_key.generate()
+            # Add access key to the store
+            server_access_identity = await self.server_access_key.identity()
+            self.access_key_store.add(server_access_identity, self.server_access_key)
             self._keys_initialized = True
 
     async def _wrap_response(self, body: bytes, logic: Callable[[str], Any]) -> tuple[int, str]:
@@ -244,9 +248,8 @@ class Server:
         # request_data = json.loads(message)
         request = AccessRequest[MockRequestPayload].parse(message)
 
-        # Get the response key hash
-        response_public_key = await self.server_response_key.public()
-        response_key_hash = await self.hasher.sum(response_public_key)
+        # Get the server identity
+        server_identity = await self.server_response_key.identity()
 
         # Use the request nonce or a bad one for testing
         nonce = request.payload["access"]["nonce"]
@@ -259,7 +262,7 @@ class Server:
                 wasFoo=request.payload["request"]["foo"],
                 wasBar=request.payload["request"]["bar"],
             ),
-            response_key_hash=response_key_hash,
+            server_identity=server_identity,
             nonce=nonce,
         )
 

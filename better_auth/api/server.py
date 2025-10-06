@@ -30,6 +30,7 @@ from better_auth.interfaces.storage import (
     IServerAuthenticationNonceStore,
     IServerRecoveryHashStore,
     IServerTimeLockStore,
+    IVerificationKeyStore,
 )
 from better_auth.messages import (
     AccessRequest,
@@ -207,17 +208,6 @@ class BetterAuthServer:
         """
         self._config = config
 
-    async def _response_key_hash(self) -> str:
-        """Compute the hash of the server's response public key.
-
-        The hash is computed each time to support key rotation in the signing
-        key implementation.
-
-        Returns:
-            The hex-encoded hash of the response public key.
-        """
-        response_public_key = await self._config.crypto.key_pair.response.public()
-        return await self._config.crypto.hasher.sum(response_public_key)
 
     async def create_account(self, message: str) -> str:
         """Create a new account with initial device registration.
@@ -276,7 +266,7 @@ class BetterAuthServer:
         )
 
         response = CreationResponse(
-            {}, await self._response_key_hash(), request.payload["access"]["nonce"]
+            {}, await self._config.crypto.key_pair.response.identity(), request.payload["access"]["nonce"]
         )
 
         await response.sign(self._config.crypto.key_pair.response)
@@ -343,7 +333,7 @@ class BetterAuthServer:
         )
 
         response = LinkDeviceResponse(
-            {}, await self._response_key_hash(), request.payload["access"]["nonce"]
+            {}, await self._config.crypto.key_pair.response.identity(), request.payload["access"]["nonce"]
         )
 
         await response.sign(self._config.crypto.key_pair.response)
@@ -389,7 +379,7 @@ class BetterAuthServer:
         )
 
         response = UnlinkDeviceResponse(
-            {}, await self._response_key_hash(), request.payload["access"]["nonce"]
+            {}, await self._config.crypto.key_pair.response.identity(), request.payload["access"]["nonce"]
         )
 
         await response.sign(self._config.crypto.key_pair.response)
@@ -431,7 +421,7 @@ class BetterAuthServer:
         )
 
         response = RotateAuthenticationKeyResponse(
-            {}, await self._response_key_hash(), request.payload["access"]["nonce"]
+            {}, await self._config.crypto.key_pair.response.identity(), request.payload["access"]["nonce"]
         )
 
         await response.sign(self._config.crypto.key_pair.response)
@@ -466,7 +456,7 @@ class BetterAuthServer:
                     "nonce": nonce,
                 },
             },
-            await self._response_key_hash(),
+            await self._config.crypto.key_pair.response.identity(),
             request.payload["access"]["nonce"],
         )
 
@@ -516,6 +506,7 @@ class BetterAuthServer:
         refresh_expiry = self._config.encoding.timestamper.format(even_later)
 
         access_token = AccessToken[T](
+            await self._config.crypto.key_pair.access.identity(),
             identity,
             request.payload["request"]["access"]["publicKey"],
             request.payload["request"]["access"]["rotationHash"],
@@ -534,7 +525,7 @@ class BetterAuthServer:
                     "token": token,
                 },
             },
-            await self._response_key_hash(),
+            await self._config.crypto.key_pair.response.identity(),
             request.payload["access"]["nonce"],
         )
 
@@ -572,7 +563,6 @@ class BetterAuthServer:
         token_string = request.payload["request"]["access"]["token"]
         token = await AccessToken.parse(
             token_string,
-            self._config.crypto.key_pair.access.verifier().signature_length,
             self._config.encoding.token_encoder,
         )
         await token.verify_token(
@@ -602,6 +592,7 @@ class BetterAuthServer:
         expiry = self._config.encoding.timestamper.format(later)
 
         access_token = AccessToken(
+            await self._config.crypto.key_pair.access.identity(),
             token.identity,
             request.payload["request"]["access"]["publicKey"],
             request.payload["request"]["access"]["rotationHash"],
@@ -620,7 +611,7 @@ class BetterAuthServer:
                     "token": serialized_token,
                 },
             },
-            await self._response_key_hash(),
+            await self._config.crypto.key_pair.response.identity(),
             request.payload["access"]["nonce"],
         )
 
@@ -677,7 +668,7 @@ class BetterAuthServer:
         )
 
         response = RecoverAccountResponse(
-            {}, await self._response_key_hash(), request.payload["access"]["nonce"]
+            {}, await self._config.crypto.key_pair.response.identity(), request.payload["access"]["nonce"]
         )
 
         await response.sign(self._config.crypto.key_pair.response)
@@ -686,26 +677,15 @@ class BetterAuthServer:
 
 
 @dataclass
-class AccessPublicKeyConfig:
-    """Configuration for access verification public key.
-
-    Attributes:
-        access: Verification key for access tokens.
-    """
-
-    access: IVerificationKey
-
-
-@dataclass
 class AccessVerifierCryptoConfig:
     """Configuration for access verifier cryptographic operations.
 
     Attributes:
-        public_key: Public key configuration.
+        access_key_store: Store for accessing verification keys by identity.
         verifier: Signature verification implementation.
     """
 
-    public_key: AccessPublicKeyConfig
+    access_key_store: IVerificationKeyStore
     verifier: IVerifier
 
 
@@ -810,8 +790,7 @@ class AccessVerifier:
         return await request._verify(
             self._config.store.access.nonce,
             self._config.crypto.verifier,
-            self._config.crypto.public_key.access.verifier(),
-            await self._config.crypto.public_key.access.public(),
+            self._config.crypto.access_key_store,
             self._config.encoding.token_encoder,
             self._config.encoding.timestamper,
         )

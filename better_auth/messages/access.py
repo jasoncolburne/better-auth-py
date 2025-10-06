@@ -12,7 +12,7 @@ from typing import Any, Dict, Generic, TypeVar
 
 from better_auth.interfaces.crypto import IVerifier
 from better_auth.interfaces.encoding import ITimestamper, ITokenEncoder
-from better_auth.interfaces.storage import IServerTimeLockStore
+from better_auth.interfaces.storage import IServerTimeLockStore, IVerificationKeyStore
 from better_auth.messages.message import SignableMessage
 
 
@@ -28,6 +28,7 @@ class AccessToken(SignableMessage, Generic[T]):
     transmission.
 
     The token structure includes:
+    - serverIdentity: Server identity string
     - identity: User identity string
     - publicKey: Current public key for verification
     - rotationHash: Hash for key rotation
@@ -37,6 +38,7 @@ class AccessToken(SignableMessage, Generic[T]):
     - attributes: Custom attributes of type T
 
     Attributes:
+        server_identity: The server's identity string.
         identity: The user's identity string.
         public_key: The public key for signature verification.
         rotation_hash: Hash for key rotation verification.
@@ -49,6 +51,7 @@ class AccessToken(SignableMessage, Generic[T]):
 
     def __init__(
         self,
+        server_identity: str,
         identity: str,
         public_key: str,
         rotation_hash: str,
@@ -60,6 +63,7 @@ class AccessToken(SignableMessage, Generic[T]):
         """Initialize an access token.
 
         Args:
+            server_identity: The server's identity string.
             identity: The user's identity string.
             public_key: The public key for signature verification.
             rotation_hash: Hash for key rotation verification.
@@ -69,6 +73,7 @@ class AccessToken(SignableMessage, Generic[T]):
             attributes: Custom attributes of generic type T.
         """
         super().__init__()
+        self.server_identity = server_identity
         self.identity = identity
         self.public_key = public_key
         self.rotation_hash = rotation_hash
@@ -79,16 +84,15 @@ class AccessToken(SignableMessage, Generic[T]):
 
     @staticmethod
     async def parse(
-        message: str, public_key_length: int, token_encoder: ITokenEncoder
+        message: str, token_encoder: ITokenEncoder
     ) -> AccessToken[T]:
         """Parse a serialized access token.
 
         The token format is: <signature><encoded_token_json>
-        where the signature length is determined by public_key_length.
+        where the signature length is determined by token_encoder.signature_length().
 
         Args:
             message: The serialized token string.
-            public_key_length: Length of the signature in characters.
             token_encoder: Encoder for decoding the token portion.
 
         Returns:
@@ -97,13 +101,15 @@ class AccessToken(SignableMessage, Generic[T]):
         Raises:
             Exception: If decoding fails or required fields are missing.
         """
-        signature = message[:public_key_length]
-        rest = message[public_key_length:]
+        signature_length = token_encoder.signature_length(message)
+        signature = message[:signature_length]
+        rest = message[signature_length:]
 
         token_string = await token_encoder.decode(rest)
         json_data = json.loads(token_string)
 
         token = AccessToken[T](
+            server_identity=json_data["serverIdentity"],
             identity=json_data["identity"],
             public_key=json_data["publicKey"],
             rotation_hash=json_data["rotationHash"],
@@ -125,6 +131,7 @@ class AccessToken(SignableMessage, Generic[T]):
         """
         return json.dumps(
             {
+                "serverIdentity": self.server_identity,
                 "identity": self.identity,
                 "publicKey": self.public_key,
                 "rotationHash": self.rotation_hash,
@@ -237,8 +244,7 @@ class AccessRequest(SignableMessage, Generic[T]):
         self,
         nonce_store: IServerTimeLockStore,
         verifier: IVerifier,
-        token_verifier: IVerifier,
-        server_access_public_key: str,
+        access_key_store: IVerificationKeyStore,
         token_encoder: ITokenEncoder,
         timestamper: ITimestamper,
     ) -> tuple[str, T]:
@@ -253,8 +259,7 @@ class AccessRequest(SignableMessage, Generic[T]):
         Args:
             nonce_store: Store for nonce replay protection.
             verifier: Verifier for request signature verification.
-            token_verifier: Verifier for token signature verification.
-            server_access_public_key: Server's public key for token verification.
+            access_key_store: Store for accessing server verification keys.
             token_encoder: Encoder for decoding the access token.
             timestamper: Timestamper for time validation.
 
@@ -268,11 +273,14 @@ class AccessRequest(SignableMessage, Generic[T]):
         """
         # Parse and verify the access token
         access_token = await AccessToken.parse(
-            self.payload["access"]["token"], token_verifier.signature_length, token_encoder
+            self.payload["access"]["token"], token_encoder
         )
 
+        # Get the verification key for the server identity
+        verification_key = await access_key_store.get(access_token.server_identity)
+
         # Verify token signature and validity
-        await access_token.verify_token(token_verifier, server_access_public_key, timestamper)
+        await access_token.verify_token(verification_key.verifier(), await verification_key.public(), timestamper)
 
         # Verify request signature using the client's public key from the token
         await self.verify(verifier, access_token.public_key)

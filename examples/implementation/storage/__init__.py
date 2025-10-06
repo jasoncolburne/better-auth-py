@@ -11,6 +11,7 @@ from .server import (
     ServerRecoveryHashStore,
     ServerTimeLockStore,
 )
+from .verification_key_store import VerificationKeyStore
 
 __all__ = [
     # Client storage
@@ -21,4 +22,5 @@ __all__ = [
     "ServerAuthenticationNonceStore",
     "ServerRecoveryHashStore",
     "ServerTimeLockStore",
+    "VerificationKeyStore",
 ]

@@ -21,6 +21,7 @@ from .storage import (
     IServerAuthenticationNonceStore,
     IServerRecoveryHashStore,
     IServerTimeLockStore,
+    IVerificationKeyStore,
 )
 
 __all__ = [
@@ -49,4 +50,5 @@ __all__ = [
     "IServerAuthenticationNonceStore",
     "IServerRecoveryHashStore",
     "IServerTimeLockStore",
+    "IVerificationKeyStore",
 ]
