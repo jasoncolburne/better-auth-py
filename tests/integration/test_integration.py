@@ -1,6 +1,5 @@
 """Integration tests for better-auth client against live servers."""
 
-import asyncio
 from typing import Any, Dict
 
 import httpx
@@ -35,7 +34,8 @@ from better_auth.messages import ServerResponse
 # Import test implementations from examples
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'examples'))
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "examples"))
 
 from implementation.crypto import Hasher, Noncer, Secp256r1, Secp256r1Verifier
 from implementation.encoding import Rfc3339Nano

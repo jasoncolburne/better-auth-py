@@ -17,7 +17,6 @@ from better_auth.exceptions import (
 from better_auth.interfaces.crypto import (
     IHasher,
     ISigningKey,
-    IVerificationKey,
     IVerifier,
 )
 from better_auth.interfaces.encoding import (
@@ -208,7 +207,6 @@ class BetterAuthServer:
         """
         self._config = config
 
-
     async def create_account(self, message: str) -> str:
         """Create a new account with initial device registration.
 
@@ -266,7 +264,9 @@ class BetterAuthServer:
         )
 
         response = CreationResponse(
-            {}, await self._config.crypto.key_pair.response.identity(), request.payload["access"]["nonce"]
+            {},
+            await self._config.crypto.key_pair.response.identity(),
+            request.payload["access"]["nonce"],
         )
 
         await response.sign(self._config.crypto.key_pair.response)
@@ -333,7 +333,9 @@ class BetterAuthServer:
         )
 
         response = LinkDeviceResponse(
-            {}, await self._config.crypto.key_pair.response.identity(), request.payload["access"]["nonce"]
+            {},
+            await self._config.crypto.key_pair.response.identity(),
+            request.payload["access"]["nonce"],
         )
 
         await response.sign(self._config.crypto.key_pair.response)
@@ -379,7 +381,9 @@ class BetterAuthServer:
         )
 
         response = UnlinkDeviceResponse(
-            {}, await self._config.crypto.key_pair.response.identity(), request.payload["access"]["nonce"]
+            {},
+            await self._config.crypto.key_pair.response.identity(),
+            request.payload["access"]["nonce"],
         )
 
         await response.sign(self._config.crypto.key_pair.response)
@@ -421,7 +425,9 @@ class BetterAuthServer:
         )
 
         response = RotateAuthenticationKeyResponse(
-            {}, await self._config.crypto.key_pair.response.identity(), request.payload["access"]["nonce"]
+            {},
+            await self._config.crypto.key_pair.response.identity(),
+            request.payload["access"]["nonce"],
         )
 
         await response.sign(self._config.crypto.key_pair.response)
@@ -668,7 +674,9 @@ class BetterAuthServer:
         )
 
         response = RecoverAccountResponse(
-            {}, await self._config.crypto.key_pair.response.identity(), request.payload["access"]["nonce"]
+            {},
+            await self._config.crypto.key_pair.response.identity(),
+            request.payload["access"]["nonce"],
         )
 
         await response.sign(self._config.crypto.key_pair.response)

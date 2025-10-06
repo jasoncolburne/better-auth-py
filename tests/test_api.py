@@ -36,7 +36,6 @@ from better_auth.api.client import (
     TokenStoreConfig,
 )
 from better_auth.api.server import (
-    AccessPublicKeyConfig,
     AccessStoreConfig,
     AccessVerifierCryptoConfig,
     AccessVerifierEncodingConfig,
@@ -55,7 +54,6 @@ from better_auth.interfaces import (
     AuthenticationPaths,
     INetwork,
     ISigningKey,
-    IVerificationKey,
     IVerifier,
     AccountPaths,
     RotatePaths,
@@ -74,6 +72,7 @@ from examples.implementation.storage import (
     ServerAuthenticationNonceStore,
     ServerRecoveryHashStore,
     ServerTimeLockStore,
+    VerificationKeyStore,
 )
 
 # Debug logging flag (set to True to see request/response messages)
@@ -204,13 +203,11 @@ class MockNetworkServer(INetwork):
             "was_bar": request.payload["request"]["bar"],
         }
 
-        # Compute response key hash
-        response_public_key = await self.response_signer.public()
-        response_key_hash = await self.hasher.sum(response_public_key)
+        server_identity = await self.response_signer.public()
 
         response = FakeServerResponse(
             response=response_data,
-            response_key_hash=response_key_hash,
+            server_identity=server_identity,
             nonce=reply_nonce,
         )
 
@@ -320,6 +317,21 @@ class MockNetworkServer(INetwork):
 
 
 # Helper functions
+
+
+async def create_response_key_store(response_signer: ISigningKey) -> VerificationKeyStore:
+    """Create a verification key store with the response signer's public key.
+
+    Args:
+        response_signer: The response signing key.
+
+    Returns:
+        VerificationKeyStore with the response public key added.
+    """
+    response_key_store = VerificationKeyStore()
+    response_identity = await response_signer.identity()
+    response_key_store.add(response_identity, response_signer)
+    return response_key_store
 
 
 async def execute_flow(
@@ -441,7 +453,7 @@ async def create_server(
 
 async def create_verifier(
     expiry: dict[str, int],
-    keys: dict[str, IVerificationKey],
+    keys: dict[str, ISigningKey],
 ) -> AccessVerifier:
     """Create an AccessVerifier instance with test configuration.
 
@@ -456,12 +468,16 @@ async def create_verifier(
     """
     ecc_verifier = Secp256r1Verifier()
     access_nonce_store = ServerTimeLockStore(expiry["access_window_in_seconds"])
+    access_key_store = VerificationKeyStore()
+
+    # Add the access verification key to the store
+    # We need to get the server identity from the access signer
+    access_identity = await keys["access_verifier"].identity()
+    access_key_store.add(access_identity, keys["access_verifier"])
 
     config = AccessVerifierConfig(
         crypto=AccessVerifierCryptoConfig(
-            public_key=AccessPublicKeyConfig(
-                access=keys["access_verifier"],
-            ),
+            access_key_store=access_key_store,
             verifier=ecc_verifier,
         ),
         encoding=AccessVerifierEncodingConfig(
@@ -617,7 +633,7 @@ def mock_network_server(
 
 
 @pytest.fixture
-def better_auth_client(
+async def better_auth_client(
     hasher: Hasher,
     noncer: Noncer,
     crypto_keys: dict[str, Secp256r1],
@@ -639,7 +655,7 @@ def better_auth_client(
             hasher=hasher,
             noncer=noncer,
             public_key=ClientPublicKeyConfig(
-                response=crypto_keys["response_signer"],
+                response=await create_response_key_store(crypto_keys["response_signer"]),
             ),
         ),
         encoding=ClientEncodingConfig(
@@ -728,7 +744,7 @@ async def test_recovers_from_loss(
                 hasher=hasher,
                 noncer=noncer,
                 public_key=ClientPublicKeyConfig(
-                    response=crypto_keys["response_signer"],
+                    response=await create_response_key_store(crypto_keys["response_signer"]),
                 ),
             ),
             encoding=ClientEncodingConfig(
@@ -765,7 +781,7 @@ async def test_recovers_from_loss(
                 hasher=Hasher(),
                 noncer=Noncer(),
                 public_key=ClientPublicKeyConfig(
-                    response=crypto_keys["response_signer"],
+                    response=await create_response_key_store(crypto_keys["response_signer"]),
                 ),
             ),
             encoding=ClientEncodingConfig(
@@ -847,7 +863,7 @@ async def test_links_another_device(
                 hasher=hasher,
                 noncer=noncer,
                 public_key=ClientPublicKeyConfig(
-                    response=crypto_keys["response_signer"],
+                    response=await create_response_key_store(crypto_keys["response_signer"]),
                 ),
             ),
             encoding=ClientEncodingConfig(
@@ -884,7 +900,7 @@ async def test_links_another_device(
                 hasher=Hasher(),
                 noncer=Noncer(),
                 public_key=ClientPublicKeyConfig(
-                    response=crypto_keys["response_signer"],
+                    response=await create_response_key_store(crypto_keys["response_signer"]),
                 ),
             ),
             encoding=ClientEncodingConfig(
@@ -983,7 +999,7 @@ async def test_rejects_expired_authentication_challenges(
                 hasher=hasher,
                 noncer=noncer,
                 public_key=ClientPublicKeyConfig(
-                    response=crypto_keys["response_signer"],
+                    response=await create_response_key_store(crypto_keys["response_signer"]),
                 ),
             ),
             encoding=ClientEncodingConfig(
@@ -1072,7 +1088,7 @@ async def test_rejects_expired_refresh_tokens(
                 hasher=hasher,
                 noncer=noncer,
                 public_key=ClientPublicKeyConfig(
-                    response=crypto_keys["response_signer"],
+                    response=await create_response_key_store(crypto_keys["response_signer"]),
                 ),
             ),
             encoding=ClientEncodingConfig(
@@ -1161,7 +1177,7 @@ async def test_rejects_expired_access_tokens(
                 hasher=hasher,
                 noncer=noncer,
                 public_key=ClientPublicKeyConfig(
-                    response=crypto_keys["response_signer"],
+                    response=await create_response_key_store(crypto_keys["response_signer"]),
                 ),
             ),
             encoding=ClientEncodingConfig(
@@ -1231,7 +1247,7 @@ async def test_detects_tampered_access_tokens(
                 hasher=hasher,
                 noncer=noncer,
                 public_key=ClientPublicKeyConfig(
-                    response=crypto_keys["response_signer"],
+                    response=await create_response_key_store(crypto_keys["response_signer"]),
                 ),
             ),
             encoding=ClientEncodingConfig(
@@ -1312,7 +1328,7 @@ async def test_detects_mismatched_access_nonce(
                 hasher=hasher,
                 noncer=noncer,
                 public_key=ClientPublicKeyConfig(
-                    response=crypto_keys["response_signer"],
+                    response=await create_response_key_store(crypto_keys["response_signer"]),
                 ),
             ),
             encoding=ClientEncodingConfig(

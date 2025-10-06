@@ -83,9 +83,7 @@ class AccessToken(SignableMessage, Generic[T]):
         self.attributes = attributes
 
     @staticmethod
-    async def parse(
-        message: str, token_encoder: ITokenEncoder
-    ) -> AccessToken[T]:
+    async def parse(message: str, token_encoder: ITokenEncoder) -> AccessToken[T]:
         """Parse a serialized access token.
 
         The token format is: <signature><encoded_token_json>
@@ -272,15 +270,15 @@ class AccessRequest(SignableMessage, Generic[T]):
             Exception: If nonce has already been used.
         """
         # Parse and verify the access token
-        access_token = await AccessToken.parse(
-            self.payload["access"]["token"], token_encoder
-        )
+        access_token = await AccessToken.parse(self.payload["access"]["token"], token_encoder)
 
         # Get the verification key for the server identity
         verification_key = await access_key_store.get(access_token.server_identity)
 
         # Verify token signature and validity
-        await access_token.verify_token(verification_key.verifier(), await verification_key.public(), timestamper)
+        await access_token.verify_token(
+            verification_key.verifier(), await verification_key.public(), timestamper
+        )
 
         # Verify request signature using the client's public key from the token
         await self.verify(verifier, access_token.public_key)

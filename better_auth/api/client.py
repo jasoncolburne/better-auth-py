@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from better_auth.exceptions import AuthenticationError, VerificationError
+from better_auth.exceptions import AuthenticationError
 from better_auth.interfaces import (
     IAuthenticationPaths,
     IClientRotatingKeyStore,
@@ -20,7 +20,6 @@ from better_auth.interfaces import (
     INoncer,
     ISigningKey,
     ITimestamper,
-    IVerificationKey,
     IVerificationKeyStore,
 )
 from better_auth.messages import (
