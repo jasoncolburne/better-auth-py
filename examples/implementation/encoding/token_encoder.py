@@ -113,4 +113,10 @@ class TokenEncoder(ITokenEncoder):
         Returns:
             The signature length (88 characters for secp256r1).
         """
+        if len(token) < 88:
+            raise "token too short"
+
+        if not token.startswith("0I"):
+            raise "invalid signature prefix"
+
         return 88
