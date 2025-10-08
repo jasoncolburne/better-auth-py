@@ -425,7 +425,7 @@ class BetterAuthClient:
         message = await request.serialize()
 
         # Send request and parse response
-        reply = await self.args.io.network.send_request(self.args.paths.rotate.link, message)
+        reply = await self.args.io.network.send_request(self.args.paths.device.link, message)
 
         response = LinkDeviceResponse.parse(reply)
         await self._verify_response(response, response.payload["access"]["serverIdentity"])
@@ -463,7 +463,7 @@ class BetterAuthClient:
         message = await request.serialize()
 
         # Send request and parse response
-        reply = await self.args.io.network.send_request(self.args.paths.rotate.unlink, message)
+        reply = await self.args.io.network.send_request(self.args.paths.device.unlink, message)
 
         response = UnlinkDeviceResponse.parse(reply)
         await self._verify_response(response, response.payload["access"]["serverIdentity"])
@@ -512,9 +512,7 @@ class BetterAuthClient:
         message = await request.serialize()
 
         # Send request and parse response
-        reply = await self.args.io.network.send_request(
-            self.args.paths.rotate.authentication, message
-        )
+        reply = await self.args.io.network.send_request(self.args.paths.device.rotate, message)
 
         response = RotateAuthenticationKeyResponse.parse(reply)
         await self._verify_response(response, response.payload["access"]["serverIdentity"])
@@ -558,7 +556,7 @@ class BetterAuthClient:
 
         start_message = await start_request.serialize()
         start_reply = await self.args.io.network.send_request(
-            self.args.paths.authenticate.start, start_message
+            self.args.paths.session.request, start_message
         )
 
         start_response = StartAuthenticationResponse.parse(start_reply)
@@ -592,7 +590,7 @@ class BetterAuthClient:
         await finish_request.sign(await self.args.store.key.authentication.signer())
         finish_message = await finish_request.serialize()
         finish_reply = await self.args.io.network.send_request(
-            self.args.paths.authenticate.finish, finish_message
+            self.args.paths.session.connect, finish_message
         )
 
         finish_response = FinishAuthenticationResponse.parse(finish_reply)
@@ -651,7 +649,7 @@ class BetterAuthClient:
         message = await request.serialize()
 
         # Send request and parse response
-        reply = await self.args.io.network.send_request(self.args.paths.rotate.access, message)
+        reply = await self.args.io.network.send_request(self.args.paths.session.refresh, message)
 
         response = RefreshAccessTokenResponse.parse(reply)
         await self._verify_response(response, response.payload["access"]["serverIdentity"])
@@ -713,7 +711,7 @@ class BetterAuthClient:
         message = await request.serialize()
 
         # Send request and parse response
-        reply = await self.args.io.network.send_request(self.args.paths.rotate.recover, message)
+        reply = await self.args.io.network.send_request(self.args.paths.account.recover, message)
 
         response = RecoverAccountResponse.parse(reply)
         await self._verify_response(response, response.payload["access"]["serverIdentity"])

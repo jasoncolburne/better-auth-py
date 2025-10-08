@@ -50,13 +50,13 @@ from better_auth.api.server import (
     StoreConfig as ServerStoreConfig,
 )
 from better_auth.interfaces import (
-    AuthenticatePaths,
+    AccountPaths,
     AuthenticationPaths,
+    DevicePaths,
     INetwork,
     ISigningKey,
     IVerifier,
-    AccountPaths,
-    RotatePaths,
+    SessionPaths,
 )
 from better_auth.messages import AccessRequest, ServerResponse
 from examples.implementation.crypto import Hasher, Noncer, Secp256r1, Secp256r1Verifier
@@ -81,18 +81,18 @@ DEBUG_LOGGING = False
 # Test authentication paths
 AUTHENTICATION_PATHS = {
     "account": {
-        "create": "/register/create",
+        "create": "/account/create",
+        "recover": "/account/recover",
     },
-    "authenticate": {
-        "start": "/authenticate/start",
-        "finish": "/authenticate/finish",
+    "session": {
+        "request": "/session/request",
+        "connect": "/session/connect",
+        "refresh": "/session/refresh",
     },
-    "rotate": {
-        "authentication": "/rotate/authentication",
-        "access": "/rotate/access",
-        "link": "/rotate/link",
-        "unlink": "/rotate/unlink",
-        "recover": "/rotate/recover",
+    "device": {
+        "rotate": "/device/rotate",
+        "link": "/device/link",
+        "unlink": "/device/unlink",
     },
 }
 
@@ -254,25 +254,25 @@ class MockNetworkServer(INetwork):
         if path == self.paths["account"]["create"]:
             return await self.better_auth_server.create_account(message)
 
-        elif path == self.paths["rotate"]["recover"]:
+        elif path == self.paths["account"]["recover"]:
             return await self.better_auth_server.recover_account(message)
 
-        elif path == self.paths["rotate"]["link"]:
+        elif path == self.paths["device"]["link"]:
             return await self.better_auth_server.link_device(message)
 
-        elif path == self.paths["rotate"]["unlink"]:
+        elif path == self.paths["device"]["unlink"]:
             return await self.better_auth_server.unlink_device(message)
 
-        elif path == self.paths["rotate"]["authentication"]:
+        elif path == self.paths["device"]["rotate"]:
             return await self.better_auth_server.rotate_authentication_key(message)
 
-        elif path == self.paths["authenticate"]["start"]:
+        elif path == self.paths["session"]["request"]:
             return await self.better_auth_server.start_authentication(message)
 
-        elif path == self.paths["authenticate"]["finish"]:
+        elif path == self.paths["session"]["connect"]:
             return await self.better_auth_server.finish_authentication(message, self.attributes)
 
-        elif path == self.paths["rotate"]["access"]:
+        elif path == self.paths["session"]["refresh"]:
             return await self.better_auth_server.refresh_access_token(message)
 
         elif path == "/foo/bar":
@@ -665,9 +665,9 @@ async def better_auth_client(
             network=mock_network_server,
         ),
         paths=AuthenticationPaths(
-            authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
             account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
-            rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+            session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
+            device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
         ),
         store=ClientStoreConfig(
             identifier=IdentifierStoreConfig(
@@ -754,9 +754,9 @@ async def test_recovers_from_loss(
                 network=mock_network_server,
             ),
             paths=AuthenticationPaths(
-                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
-                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+                session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
+                device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(
@@ -791,9 +791,9 @@ async def test_recovers_from_loss(
                 network=mock_network_server,
             ),
             paths=AuthenticationPaths(
-                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
-                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+                session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
+                device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(
@@ -873,9 +873,9 @@ async def test_links_another_device(
                 network=mock_network_server,
             ),
             paths=AuthenticationPaths(
-                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
-                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+                session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
+                device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(
@@ -910,9 +910,9 @@ async def test_links_another_device(
                 network=mock_network_server,
             ),
             paths=AuthenticationPaths(
-                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
-                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+                session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
+                device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(
@@ -1009,9 +1009,9 @@ async def test_rejects_expired_authentication_challenges(
                 network=mock_network_server,
             ),
             paths=AuthenticationPaths(
-                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
-                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+                session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
+                device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(
@@ -1098,9 +1098,9 @@ async def test_rejects_expired_refresh_tokens(
                 network=mock_network_server,
             ),
             paths=AuthenticationPaths(
-                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
-                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+                session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
+                device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(
@@ -1187,9 +1187,9 @@ async def test_rejects_expired_access_tokens(
                 network=mock_network_server,
             ),
             paths=AuthenticationPaths(
-                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
-                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+                session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
+                device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(
@@ -1257,9 +1257,9 @@ async def test_detects_tampered_access_tokens(
                 network=mock_network_server,
             ),
             paths=AuthenticationPaths(
-                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
-                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+                session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
+                device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(
@@ -1338,9 +1338,9 @@ async def test_detects_mismatched_access_nonce(
                 network=mock_network_server,
             ),
             paths=AuthenticationPaths(
-                authenticate=AuthenticatePaths(**AUTHENTICATION_PATHS["authenticate"]),
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
-                rotate=RotatePaths(**AUTHENTICATION_PATHS["rotate"]),
+                session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
+                device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(

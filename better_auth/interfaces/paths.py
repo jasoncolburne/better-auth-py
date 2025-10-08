@@ -9,100 +9,101 @@ from dataclasses import dataclass
 from typing import Protocol, TypedDict
 
 
-class AuthenticatePathsDict(TypedDict):
-    """Authentication endpoint paths."""
-
-    start: str
-    finish: str
-
-
-class RegisterPathsDict(TypedDict):
-    """Registration endpoint paths."""
+class AccountPathsDict(TypedDict):
+    """Account endpoint paths."""
 
     create: str
+    recover: str
 
 
-class RotatePathsDict(TypedDict):
-    """Key rotation endpoint paths."""
+class SessionPathsDict(TypedDict):
+    """Session endpoint paths."""
 
-    authentication: str
-    access: str
+    request: str
+    connect: str
+    refresh: str
+
+
+class DevicePathsDict(TypedDict):
+    """Device endpoint paths."""
+
+    rotate: str
     link: str
     unlink: str
-    recover: str
 
 
 class IAuthenticationPaths(Protocol):
     """Interface for authentication path configuration."""
 
     @property
-    def authenticate(self) -> AuthenticatePathsDict:
-        """Authentication endpoint paths.
+    def account(self) -> AccountPathsDict:
+        """Account endpoint paths.
 
         Returns:
-            Dictionary containing 'start' and 'finish' paths.
+            Dictionary containing 'create' and 'recover' paths.
         """
         ...
 
     @property
-    def account(self) -> RegisterPathsDict:
-        """Registration endpoint paths.
+    def session(self) -> SessionPathsDict:
+        """Session endpoint paths.
 
         Returns:
-            Dictionary containing 'create', 'link', and 'recover' paths.
+            Dictionary containing 'request', 'connect', and 'refresh' paths.
         """
         ...
 
     @property
-    def rotate(self) -> RotatePathsDict:
-        """Key rotation endpoint paths.
+    def device(self) -> DevicePathsDict:
+        """Device endpoint paths.
 
         Returns:
-            Dictionary containing 'authentication' and 'access' paths.
+            Dictionary containing 'rotate', 'link', and 'unlink' paths.
         """
         ...
-
-
-@dataclass
-class AuthenticatePaths:
-    """Authentication endpoint paths.
-
-    Attributes:
-        start: Path for starting authentication.
-        finish: Path for finishing authentication.
-    """
-
-    start: str
-    finish: str
 
 
 @dataclass
 class AccountPaths:
-    """Registration endpoint paths.
+    """Account endpoint paths.
 
     Attributes:
         create: Path for account creation.
-        link: Path for device linking.
         recover: Path for account recovery.
     """
 
     create: str
+    recover: str
 
 
 @dataclass
-class RotatePaths:
-    """Key rotation endpoint paths.
+class SessionPaths:
+    """Session endpoint paths.
 
     Attributes:
-        authentication: Path for authentication key rotation.
-        access: Path for access token refresh.
+        request: Path for session request.
+        connect: Path for session connect.
+        refresh: Path for session refresh.
     """
 
-    authentication: str
-    access: str
+    request: str
+    connect: str
+    refresh: str
+
+
+@dataclass
+class DevicePaths:
+    """Device endpoint paths.
+
+    Attributes:
+        rotate: Path for device key rotation.
+        link: Path for device linking.
+        unlink: Path for device unlinking.
+    """
+
+    rotate: str
     link: str
     unlink: str
-    recover: str
 
 
 @dataclass
@@ -110,11 +111,11 @@ class AuthenticationPaths:
     """Concrete implementation of authentication path configuration.
 
     Attributes:
-        authenticate: Authentication endpoint paths.
-        register: Registration endpoint paths.
-        rotate: Key rotation endpoint paths.
+        account: Account endpoint paths.
+        session: Session endpoint paths.
+        device: Device endpoint paths.
     """
 
-    authenticate: AuthenticatePaths
     account: AccountPaths
-    rotate: RotatePaths
+    session: SessionPaths
+    device: DevicePaths
