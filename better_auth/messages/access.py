@@ -52,6 +52,7 @@ class AccessToken(SignableMessage, Generic[T]):
     def __init__(
         self,
         server_identity: str,
+        device: str,
         identity: str,
         public_key: str,
         rotation_hash: str,
@@ -64,6 +65,7 @@ class AccessToken(SignableMessage, Generic[T]):
 
         Args:
             server_identity: The server's identity string.
+            device: The device identifier string.
             identity: The user's identity string.
             public_key: The public key for signature verification.
             rotation_hash: Hash for key rotation verification.
@@ -74,6 +76,7 @@ class AccessToken(SignableMessage, Generic[T]):
         """
         super().__init__()
         self.server_identity = server_identity
+        self.device = device
         self.identity = identity
         self.public_key = public_key
         self.rotation_hash = rotation_hash
@@ -108,6 +111,7 @@ class AccessToken(SignableMessage, Generic[T]):
 
         token = AccessToken[T](
             server_identity=json_data["serverIdentity"],
+            device=json_data["device"],
             identity=json_data["identity"],
             public_key=json_data["publicKey"],
             rotation_hash=json_data["rotationHash"],
@@ -130,6 +134,7 @@ class AccessToken(SignableMessage, Generic[T]):
         return json.dumps(
             {
                 "serverIdentity": self.server_identity,
+                "device": self.device,
                 "identity": self.identity,
                 "publicKey": self.public_key,
                 "rotationHash": self.rotation_hash,
@@ -245,8 +250,8 @@ class AccessRequest(SignableMessage, Generic[T]):
         access_key_store: IVerificationKeyStore,
         token_encoder: ITokenEncoder,
         timestamper: ITimestamper,
-    ) -> tuple[str, T]:
-        """Verify the access request and extract identity and attributes.
+    ) -> AccessToken[T]:
+        """Verify the access request and extract access token.
 
         This method performs comprehensive verification:
         1. Parses and verifies the access token
@@ -262,7 +267,7 @@ class AccessRequest(SignableMessage, Generic[T]):
             timestamper: Timestamper for time validation.
 
         Returns:
-            A tuple of (identity, attributes) extracted from the access token.
+            The verified AccessToken.
 
         Raises:
             Exception: If verification fails at any stage.
@@ -302,7 +307,7 @@ class AccessRequest(SignableMessage, Generic[T]):
         # Reserve nonce to prevent replay
         await nonce_store.reserve(self.payload["access"]["nonce"])
 
-        return (access_token.identity, access_token.attributes)
+        return access_token
 
     @staticmethod
     def parse(message: str) -> AccessRequest[T]:

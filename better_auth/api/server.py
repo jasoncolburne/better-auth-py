@@ -513,6 +513,7 @@ class BetterAuthServer:
 
         access_token = AccessToken[T](
             await self._config.crypto.key_pair.access.identity(),
+            request.payload["request"]["authentication"]["device"],
             identity,
             request.payload["request"]["access"]["publicKey"],
             request.payload["request"]["access"]["rotationHash"],
@@ -599,6 +600,7 @@ class BetterAuthServer:
 
         access_token = AccessToken(
             await self._config.crypto.key_pair.access.identity(),
+            token.device,
             token.identity,
             request.payload["request"]["access"]["publicKey"],
             request.payload["request"]["access"]["rotationHash"],
@@ -771,7 +773,7 @@ class AccessVerifier:
         """
         self._config = config
 
-    async def verify(self, message: str) -> tuple[str, U]:
+    async def verify(self, message: str) -> tuple[T, AccessToken[U]]:
         """Verify an authenticated access request.
 
         This method performs comprehensive verification of an access request:
@@ -785,9 +787,9 @@ class AccessVerifier:
             message: Serialized AccessRequest from the client.
 
         Returns:
-            A tuple of (identity, attributes) where:
-                - identity: The user's identity string from the token
-                - attributes: Custom attributes from the token of type U
+            A tuple of (request, token) where:
+                - request: The request payload of type T
+                - token: The verified AccessToken with attributes of type U
 
         Raises:
             InvalidMessageError: If the message is malformed.
@@ -795,10 +797,11 @@ class AccessVerifier:
             AuthenticationError: If token is expired or nonce is invalid.
         """
         request = AccessRequest.parse(message)
-        return await request._verify(
+        token = await request._verify(
             self._config.store.access.nonce,
             self._config.crypto.verifier,
             self._config.crypto.access_key_store,
             self._config.encoding.token_encoder,
             self._config.encoding.timestamper,
         )
+        return (request.payload["request"], token)
