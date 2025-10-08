@@ -1,7 +1,7 @@
-"""Authentication message types for better-auth.
+"""Session management message types for better-auth.
 
-This module defines the request and response message types for the two-phase
-authentication process: starting authentication and finishing authentication.
+This module defines the request and response message types for session
+operations including requesting, creating, and refreshing sessions.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from better_auth.messages.request import ClientRequest
 from better_auth.messages.response import ServerResponse
 
 
-class StartAuthenticationRequest(SerializableMessage):
+class RequestSessionRequest(SerializableMessage):
     """Request message to start the authentication process.
 
     This message initiates authentication by providing an access nonce and
@@ -57,24 +57,24 @@ class StartAuthenticationRequest(SerializableMessage):
         return json.dumps({"payload": self.payload}, separators=(",", ":"), sort_keys=False)
 
     @staticmethod
-    def parse(message: str) -> StartAuthenticationRequest:
+    def parse(message: str) -> RequestSessionRequest:
         """Parse a serialized start authentication request message.
 
         Args:
             message: The serialized JSON message string.
 
         Returns:
-            A new StartAuthenticationRequest instance with the parsed data.
+            A new RequestSessionRequest instance with the parsed data.
 
         Raises:
             json.JSONDecodeError: If the message is not valid JSON.
             KeyError: If required fields are missing from the message.
         """
         json_data = json.loads(message)
-        return StartAuthenticationRequest(json_data["payload"])
+        return RequestSessionRequest(json_data["payload"])
 
 
-class StartAuthenticationResponse(ServerResponse[Dict[str, Any]]):
+class RequestSessionResponse(ServerResponse[Dict[str, Any]]):
     """Response message for starting authentication.
 
     This message provides the authentication nonce that must be signed
@@ -103,24 +103,24 @@ class StartAuthenticationResponse(ServerResponse[Dict[str, Any]]):
         super().__init__(response, response_key_hash, nonce)
 
     @staticmethod
-    def parse(message: str) -> StartAuthenticationResponse:
+    def parse(message: str) -> RequestSessionResponse:
         """Parse a serialized start authentication response message.
 
         Args:
             message: The serialized JSON message string.
 
         Returns:
-            A new StartAuthenticationResponse instance with the parsed data
+            A new RequestSessionResponse instance with the parsed data
             and signature.
 
         Raises:
             json.JSONDecodeError: If the message is not valid JSON.
             KeyError: If required fields are missing from the message.
         """
-        return ServerResponse._parse(message, StartAuthenticationResponse)
+        return ServerResponse._parse(message, RequestSessionResponse)
 
 
-class FinishAuthenticationRequest(ClientRequest[Dict[str, Any]]):
+class CreateSessionRequest(ClientRequest[Dict[str, Any]]):
     """Request message to complete the authentication process.
 
     This message completes authentication by providing the signed authentication
@@ -155,24 +155,24 @@ class FinishAuthenticationRequest(ClientRequest[Dict[str, Any]]):
         super().__init__(request, nonce)
 
     @staticmethod
-    def parse(message: str) -> FinishAuthenticationRequest:
+    def parse(message: str) -> CreateSessionRequest:
         """Parse a serialized finish authentication request message.
 
         Args:
             message: The serialized JSON message string.
 
         Returns:
-            A new FinishAuthenticationRequest instance with the parsed data
+            A new CreateSessionRequest instance with the parsed data
             and signature.
 
         Raises:
             json.JSONDecodeError: If the message is not valid JSON.
             KeyError: If required fields are missing from the message.
         """
-        return ClientRequest._parse(message, FinishAuthenticationRequest)
+        return ClientRequest._parse(message, CreateSessionRequest)
 
 
-class FinishAuthenticationResponse(ServerResponse[Dict[str, Any]]):
+class CreateSessionResponse(ServerResponse[Dict[str, Any]]):
     """Response message for completing authentication.
 
     This message provides the access token that can be used for subsequent
@@ -201,18 +201,111 @@ class FinishAuthenticationResponse(ServerResponse[Dict[str, Any]]):
         super().__init__(response, response_key_hash, nonce)
 
     @staticmethod
-    def parse(message: str) -> FinishAuthenticationResponse:
+    def parse(message: str) -> CreateSessionResponse:
         """Parse a serialized finish authentication response message.
 
         Args:
             message: The serialized JSON message string.
 
         Returns:
-            A new FinishAuthenticationResponse instance with the parsed data
+            A new CreateSessionResponse instance with the parsed data
             and signature.
 
         Raises:
             json.JSONDecodeError: If the message is not valid JSON.
             KeyError: If required fields are missing from the message.
         """
-        return ServerResponse._parse(message, FinishAuthenticationResponse)
+        return ServerResponse._parse(message, CreateSessionResponse)
+
+
+class RefreshSessionRequest(ClientRequest[Dict[str, Any]]):
+    """Request message for refreshing an access token.
+
+    This message requests a new access token using an existing (but not expired)
+    access token along with the current public key and rotation hash.
+
+    The request payload structure is:
+    {
+        "access": {
+            "publicKey": "<public_key>",
+            "rotationHash": "<rotation_hash>",
+            "token": "<current_access_token>"
+        }
+    }
+
+    Attributes:
+        payload: Dictionary containing access metadata and refresh request data.
+        signature: Optional cryptographic signature.
+    """
+
+    def __init__(self, request: Dict[str, Any], nonce: str) -> None:
+        """Initialize a refresh access token request.
+
+        Args:
+            request: Dictionary containing access data with keys:
+                - access: Dict containing publicKey, rotationHash, and token.
+            nonce: The nonce for replay protection.
+        """
+        super().__init__(request, nonce)
+
+    @staticmethod
+    def parse(message: str) -> RefreshSessionRequest:
+        """Parse a serialized refresh access token request message.
+
+        Args:
+            message: The serialized JSON message string.
+
+        Returns:
+            A new RefreshSessionRequest instance with the parsed data
+            and signature.
+
+        Raises:
+            json.JSONDecodeError: If the message is not valid JSON.
+            KeyError: If required fields are missing from the message.
+        """
+        return ClientRequest._parse(message, RefreshSessionRequest)
+
+
+class RefreshSessionResponse(ServerResponse[Dict[str, Any]]):
+    """Response message for access token refresh.
+
+    This message provides the new access token that replaces the previous one.
+
+    The response payload structure is:
+    {
+        "access": {
+            "token": "<new_access_token>"
+        }
+    }
+
+    Attributes:
+        payload: Dictionary containing access metadata and the new access token.
+        signature: Optional cryptographic signature.
+    """
+
+    def __init__(self, response: Dict[str, Any], response_key_hash: str, nonce: str) -> None:
+        """Initialize a refresh access token response.
+
+        Args:
+            response: Dictionary containing the new access token.
+            response_key_hash: Hash of the response key for verification.
+            nonce: The nonce for replay protection.
+        """
+        super().__init__(response, response_key_hash, nonce)
+
+    @staticmethod
+    def parse(message: str) -> RefreshSessionResponse:
+        """Parse a serialized refresh access token response message.
+
+        Args:
+            message: The serialized JSON message string.
+
+        Returns:
+            A new RefreshSessionResponse instance with the parsed data
+            and signature.
+
+        Raises:
+            json.JSONDecodeError: If the message is not valid JSON.
+            KeyError: If required fields are missing from the message.
+        """
+        return ServerResponse._parse(message, RefreshSessionResponse)

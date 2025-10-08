@@ -8,11 +8,11 @@ from .crypto import IHasher, INoncer, ISigningKey, IVerificationKey, IVerifier
 from .encoding import IIdentityVerifier, ITimestamper, ITokenEncoder
 from .io import INetwork
 from .paths import (
-    AuthenticatePaths,
-    AuthenticationPaths,
-    IAuthenticationPaths,
     AccountPaths,
-    RotatePaths,
+    AuthenticationPaths,
+    DevicePaths,
+    IAuthenticationPaths,
+    SessionPaths,
 )
 from .storage import (
     IClientRotatingKeyStore,
@@ -38,11 +38,11 @@ __all__ = [
     # io
     "INetwork",
     # paths
-    "AuthenticatePaths",
-    "AuthenticationPaths",
-    "IAuthenticationPaths",
     "AccountPaths",
-    "RotatePaths",
+    "AuthenticationPaths",
+    "DevicePaths",
+    "IAuthenticationPaths",
+    "SessionPaths",
     # storage
     "IClientRotatingKeyStore",
     "IClientValueStore",

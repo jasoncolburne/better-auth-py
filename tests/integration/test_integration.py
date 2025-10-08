@@ -19,15 +19,15 @@ from better_auth.api.client import (
 )
 from better_auth.interfaces import (
     AccountPaths,
-    AuthenticatePaths,
     AuthenticationPaths,
+    DevicePaths,
     IHasher,
     INetwork,
     INoncer,
     ITimestamper,
     IVerificationKeyStore,
     IVerifier,
-    RotatePaths,
+    SessionPaths,
 )
 from better_auth.messages import ServerResponse
 
@@ -45,19 +45,19 @@ DEBUG_LOGGING = False
 
 # Authentication paths matching the server
 authentication_paths = AuthenticationPaths(
-    authenticate=AuthenticatePaths(
-        start="/authenticate/start",
-        finish="/authenticate/finish",
-    ),
     account=AccountPaths(
         create="/account/create",
+        recover="/account/recover",
     ),
-    rotate=RotatePaths(
-        authentication="/rotate/authentication",
-        access="/rotate/access",
-        link="/rotate/link",
-        unlink="/rotate/unlink",
-        recover="/rotate/recover",
+    session=SessionPaths(
+        request="/session/request",
+        create="/session/create",
+        refresh="/session/refresh",
+    ),
+    device=DevicePaths(
+        rotate="/device/rotate",
+        link="/device/link",
+        unlink="/device/unlink",
     ),
 )
 
@@ -106,9 +106,9 @@ async def execute_flow(
     verification_key_store: IVerificationKeyStore,
 ) -> None:
     """Execute the standard authentication flow."""
-    await better_auth_client.rotate_authentication_key()
-    await better_auth_client.authenticate()
-    await better_auth_client.refresh_access_token()
+    await better_auth_client.rotate_device()
+    await better_auth_client.create_session()
+    await better_auth_client.refresh_session()
 
     await _test_access(better_auth_client, ecc_verifier, verification_key_store)
 
@@ -442,7 +442,7 @@ async def test_detects_mismatched_access_nonce(client_components):
     await client.create_account(recovery_hash)
 
     with pytest.raises(Exception) as exc_info:
-        await client.authenticate()
+        await client.create_session()
         message = {"foo": "bar", "bar": "foo"}
         await client.make_access_request("/bad/nonce", message)
 

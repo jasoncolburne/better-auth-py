@@ -34,21 +34,21 @@ from better_auth.interfaces.storage import (
 from better_auth.messages import (
     AccessRequest,
     AccessToken,
-    CreationRequest,
-    CreationResponse,
-    FinishAuthenticationRequest,
-    FinishAuthenticationResponse,
+    CreateAccountRequest,
+    CreateAccountResponse,
+    CreateSessionRequest,
+    CreateSessionResponse,
     LinkContainer,
     LinkDeviceRequest,
     LinkDeviceResponse,
     RecoverAccountRequest,
     RecoverAccountResponse,
-    RefreshAccessTokenRequest,
-    RefreshAccessTokenResponse,
-    RotateAuthenticationKeyRequest,
-    RotateAuthenticationKeyResponse,
-    StartAuthenticationRequest,
-    StartAuthenticationResponse,
+    RefreshSessionRequest,
+    RefreshSessionResponse,
+    RequestSessionRequest,
+    RequestSessionResponse,
+    RotateDeviceRequest,
+    RotateDeviceResponse,
     UnlinkDeviceRequest,
     UnlinkDeviceResponse,
 )
@@ -219,17 +219,17 @@ class BetterAuthServer:
         6. Returns a signed response
 
         Args:
-            message: Serialized CreationRequest from the client.
+            message: Serialized CreateAccountRequest from the client.
 
         Returns:
-            Serialized CreationResponse signed by the server.
+            Serialized CreateAccountResponse signed by the server.
 
         Raises:
             InvalidMessageError: If the message is malformed.
             VerificationError: If signature or identity verification fails.
             AuthenticationError: If the device hash is invalid.
         """
-        request = CreationRequest.parse(message)
+        request = CreateAccountRequest.parse(message)
         await request.verify(
             self._config.crypto.verifier,
             request.payload["request"]["authentication"]["publicKey"],
@@ -263,7 +263,7 @@ class BetterAuthServer:
             False,
         )
 
-        response = CreationResponse(
+        response = CreateAccountResponse(
             {},
             await self._config.crypto.key_pair.response.identity(),
             request.payload["access"]["nonce"],
@@ -390,7 +390,7 @@ class BetterAuthServer:
 
         return await response.serialize()
 
-    async def rotate_authentication_key(self, message: str) -> str:
+    async def rotate_device(self, message: str) -> str:
         """Rotate the authentication key for a device.
 
         This method:
@@ -402,16 +402,16 @@ class BetterAuthServer:
         in future versions.
 
         Args:
-            message: Serialized RotateAuthenticationKeyRequest from the client.
+            message: Serialized RotateDeviceRequest from the client.
 
         Returns:
-            Serialized RotateAuthenticationKeyResponse signed by the server.
+            Serialized RotateDeviceResponse signed by the server.
 
         Raises:
             InvalidMessageError: If the message is malformed.
             VerificationError: If signature verification fails.
         """
-        request = RotateAuthenticationKeyRequest.parse(message)
+        request = RotateDeviceRequest.parse(message)
         await request.verify(
             self._config.crypto.verifier,
             request.payload["request"]["authentication"]["publicKey"],
@@ -424,7 +424,7 @@ class BetterAuthServer:
             request.payload["request"]["authentication"]["rotationHash"],
         )
 
-        response = RotateAuthenticationKeyResponse(
+        response = RotateDeviceResponse(
             {},
             await self._config.crypto.key_pair.response.identity(),
             request.payload["access"]["nonce"],
@@ -434,7 +434,7 @@ class BetterAuthServer:
 
         return await response.serialize()
 
-    async def start_authentication(self, message: str) -> str:
+    async def request_session(self, message: str) -> str:
         """Start the authentication process by generating a nonce.
 
         This is the first phase of two-phase authentication. The server
@@ -442,21 +442,21 @@ class BetterAuthServer:
         possession of their private key.
 
         Args:
-            message: Serialized StartAuthenticationRequest from the client.
+            message: Serialized RequestSessionRequest from the client.
 
         Returns:
-            Serialized StartAuthenticationResponse with nonce, signed by the server.
+            Serialized RequestSessionResponse with nonce, signed by the server.
 
         Raises:
             InvalidMessageError: If the message is malformed.
         """
-        request = StartAuthenticationRequest.parse(message)
+        request = RequestSessionRequest.parse(message)
 
         nonce = await self._config.store.authentication.nonce.generate(
             request.payload["request"]["authentication"]["identity"]
         )
 
-        response = StartAuthenticationResponse(
+        response = RequestSessionResponse(
             {
                 "authentication": {
                     "nonce": nonce,
@@ -470,7 +470,7 @@ class BetterAuthServer:
 
         return await response.serialize()
 
-    async def finish_authentication(self, message: str, attributes: T) -> str:
+    async def create_session(self, message: str, attributes: T) -> str:
         """Finish the authentication process and issue an access token.
 
         This is the second phase of two-phase authentication. The server:
@@ -479,18 +479,18 @@ class BetterAuthServer:
         3. Issues a signed access token with the provided attributes
 
         Args:
-            message: Serialized FinishAuthenticationRequest from the client.
+            message: Serialized CreateSessionRequest from the client.
             attributes: Custom attributes to embed in the access token.
 
         Returns:
-            Serialized FinishAuthenticationResponse with access token, signed by the server.
+            Serialized CreateSessionResponse with access token, signed by the server.
 
         Raises:
             InvalidMessageError: If the message is malformed.
             VerificationError: If signature verification fails.
             AuthenticationError: If nonce validation fails.
         """
-        request = FinishAuthenticationRequest.parse(message)
+        request = CreateSessionRequest.parse(message)
         identity = await self._config.store.authentication.nonce.validate(
             request.payload["request"]["authentication"]["nonce"]
         )
@@ -525,7 +525,7 @@ class BetterAuthServer:
         await access_token.sign(self._config.crypto.key_pair.access)
         token = await access_token.serialize_token(self._config.encoding.token_encoder)
 
-        response = FinishAuthenticationResponse(
+        response = CreateSessionResponse(
             {
                 "access": {
                     "token": token,
@@ -539,7 +539,7 @@ class BetterAuthServer:
 
         return await response.serialize()
 
-    async def refresh_access_token(self, message: str) -> str:
+    async def refresh_session(self, message: str) -> str:
         """Refresh an access token before it expires.
 
         This method:
@@ -551,17 +551,17 @@ class BetterAuthServer:
         6. Issues a new access token with extended expiry
 
         Args:
-            message: Serialized RefreshAccessTokenRequest from the client.
+            message: Serialized RefreshSessionRequest from the client.
 
         Returns:
-            Serialized RefreshAccessTokenResponse with new token, signed by the server.
+            Serialized RefreshSessionResponse with new token, signed by the server.
 
         Raises:
             InvalidMessageError: If the message is malformed.
             VerificationError: If signature or token verification fails.
             AuthenticationError: If hash mismatch or refresh expired.
         """
-        request = RefreshAccessTokenRequest.parse(message)
+        request = RefreshSessionRequest.parse(message)
         await request.verify(
             self._config.crypto.verifier, request.payload["request"]["access"]["publicKey"]
         )
@@ -611,7 +611,7 @@ class BetterAuthServer:
         await access_token.sign(self._config.crypto.key_pair.access)
         serialized_token = await access_token.serialize_token(self._config.encoding.token_encoder)
 
-        response = RefreshAccessTokenResponse(
+        response = RefreshSessionResponse(
             {
                 "access": {
                     "token": serialized_token,
