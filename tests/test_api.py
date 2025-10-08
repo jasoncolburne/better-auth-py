@@ -277,36 +277,42 @@ class MockNetworkServer(INetwork):
 
         elif path == "/foo/bar":
             # Test endpoint for successful access
-            access_identity, attributes = await self.access_verifier.verify(message)
+            request, token = await self.access_verifier.verify(message)
 
-            if access_identity is None:
-                raise RuntimeError("null identity")
+            if request is None:
+                raise RuntimeError("null request")
 
-            if not access_identity.startswith("E"):
+            if token is None:
+                raise RuntimeError("null token")
+
+            if not token.identity.startswith("E"):
                 raise RuntimeError("unexpected identity format")
 
-            if len(access_identity) != 44:
+            if len(token.identity) != 44:
                 raise RuntimeError("unexpected identity length")
 
-            if attributes.get("permissions_by_role") != self.attributes.permissions_by_role:
+            if token.attributes.get("permissions_by_role") != self.attributes.permissions_by_role:
                 raise RuntimeError("attributes do not match")
 
             return await self.respond_to_access_request(message)
 
         elif path == "/bad/nonce":
             # Test endpoint for nonce mismatch detection
-            access_identity, attributes = await self.access_verifier.verify(message)
+            request, token = await self.access_verifier.verify(message)
 
-            if access_identity is None:
-                raise RuntimeError("null identity")
+            if request is None:
+                raise RuntimeError("null request")
 
-            if not access_identity.startswith("E"):
+            if token is None:
+                raise RuntimeError("null token")
+
+            if not token.identity.startswith("E"):
                 raise RuntimeError("unexpected identity format")
 
-            if len(access_identity) != 44:
+            if len(token.identity) != 44:
                 raise RuntimeError("unexpected identity length")
 
-            if attributes.get("permissions_by_role") != self.attributes.permissions_by_role:
+            if token.attributes.get("permissions_by_role") != self.attributes.permissions_by_role:
                 raise RuntimeError("attributes do not match")
 
             # Return response with wrong nonce
