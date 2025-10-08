@@ -24,22 +24,22 @@ from better_auth.interfaces import (
 )
 from better_auth.messages import (
     AccessRequest,
-    CreationRequest,
-    CreationResponse,
-    FinishAuthenticationRequest,
-    FinishAuthenticationResponse,
+    CreateAccountRequest,
+    CreateAccountResponse,
+    CreateSessionRequest,
+    CreateSessionResponse,
     LinkContainer,
     LinkDeviceRequest,
     LinkDeviceResponse,
     RecoverAccountRequest,
     RecoverAccountResponse,
-    RefreshAccessTokenRequest,
-    RefreshAccessTokenResponse,
-    RotateAuthenticationKeyRequest,
-    RotateAuthenticationKeyResponse,
+    RefreshSessionRequest,
+    RefreshSessionResponse,
+    RequestSessionRequest,
+    RequestSessionResponse,
+    RotateDeviceRequest,
+    RotateDeviceResponse,
     ScannableResponse,
-    StartAuthenticationRequest,
-    StartAuthenticationResponse,
     UnlinkDeviceRequest,
     UnlinkDeviceResponse,
 )
@@ -296,7 +296,7 @@ class BetterAuthClient:
         nonce = await self.args.crypto.noncer.generate128()
 
         # Create and sign the request
-        request = CreationRequest(
+        request = CreateAccountRequest(
             {
                 "authentication": {
                     "device": device,
@@ -315,7 +315,70 @@ class BetterAuthClient:
         # Send request and parse response
         reply = await self.args.io.network.send_request(self.args.paths.account.create, message)
 
-        response = CreationResponse.parse(reply)
+        response = CreateAccountResponse.parse(reply)
+        await self._verify_response(response, response.payload["access"]["serverIdentity"])
+
+        # Verify nonce matches
+        if response.payload["access"]["nonce"] != nonce:
+            raise AuthenticationError("incorrect nonce")
+
+        # Store identity and device
+        await self.args.store.identifier.identity.store(identity)
+        await self.args.store.identifier.device.store(device)
+
+    async def recover_account(
+        self, identity: str, recovery_key: ISigningKey, recovery_hash: str
+    ) -> None:
+        """Recover an account using the recovery key.
+
+        This method allows account recovery when all devices are lost or
+        compromised. It uses the recovery key to prove ownership and
+        registers a new device.
+
+        Steps:
+        1. Initialize new authentication keys for this device
+        2. Generate new device identifier
+        3. Create and sign recovery request with recovery key
+        4. Send to server
+        5. Verify response
+        6. Store identity and device
+
+        Args:
+            identity: The identity identifier to recover.
+            recovery_key: The recovery signing key for this identity.
+
+        Raises:
+            VerificationError: If response verification fails.
+            AuthenticationError: If nonce mismatch or recovery key invalid.
+            StorageError: If storage operations fail.
+            NetworkError: If network communication fails.
+        """
+        # Initialize new authentication keys
+        _, public_key, rotation_hash = await self.args.store.key.authentication.initialize()
+        device = await self.args.crypto.hasher.sum(public_key)
+        nonce = await self.args.crypto.noncer.generate128()
+
+        request = RecoverAccountRequest(
+            {
+                "authentication": {
+                    "device": device,
+                    "identity": identity,
+                    "publicKey": public_key,
+                    "recoveryHash": recovery_hash,
+                    "recoveryKey": await recovery_key.public(),
+                    "rotationHash": rotation_hash,
+                }
+            },
+            nonce,
+        )
+
+        await request.sign(recovery_key)
+        message = await request.serialize()
+
+        # Send request and parse response
+        reply = await self.args.io.network.send_request(self.args.paths.account.recover, message)
+
+        response = RecoverAccountResponse.parse(reply)
         await self._verify_response(response, response.payload["access"]["serverIdentity"])
 
         # Verify nonce matches
@@ -472,7 +535,7 @@ class BetterAuthClient:
         if response.payload["access"]["nonce"] != nonce:
             raise AuthenticationError("incorrect nonce")
 
-    async def rotate_authentication_key(self) -> None:
+    async def rotate_device(self) -> None:
         """Rotate the authentication key for this device.
 
         This method performs key rotation for the authentication key, which
@@ -496,7 +559,7 @@ class BetterAuthClient:
         nonce = await self.args.crypto.noncer.generate128()
 
         # Create and sign the request
-        request = RotateAuthenticationKeyRequest(
+        request = RotateDeviceRequest(
             {
                 "authentication": {
                     "device": await self.args.store.identifier.device.get(),
@@ -514,14 +577,14 @@ class BetterAuthClient:
         # Send request and parse response
         reply = await self.args.io.network.send_request(self.args.paths.device.rotate, message)
 
-        response = RotateAuthenticationKeyResponse.parse(reply)
+        response = RotateDeviceResponse.parse(reply)
         await self._verify_response(response, response.payload["access"]["serverIdentity"])
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
             raise AuthenticationError("incorrect nonce")
 
-    async def authenticate(self) -> None:
+    async def create_session(self) -> None:
         """Authenticate with the server and obtain an access token.
 
         This method performs a two-phase authentication:
@@ -545,7 +608,7 @@ class BetterAuthClient:
         # Phase 1: Start authentication
         start_nonce = await self.args.crypto.noncer.generate128()
 
-        start_request = StartAuthenticationRequest(
+        start_request = RequestSessionRequest(
             {
                 "access": {"nonce": start_nonce},
                 "request": {
@@ -559,7 +622,7 @@ class BetterAuthClient:
             self.args.paths.session.request, start_message
         )
 
-        start_response = StartAuthenticationResponse.parse(start_reply)
+        start_response = RequestSessionResponse.parse(start_reply)
         await self._verify_response(
             start_response, start_response.payload["access"]["serverIdentity"]
         )
@@ -573,7 +636,7 @@ class BetterAuthClient:
         _, public_key, rotation_hash = await self.args.store.key.access.initialize()
         finish_nonce = await self.args.crypto.noncer.generate128()
 
-        finish_request = FinishAuthenticationRequest(
+        finish_request = CreateSessionRequest(
             {
                 "access": {
                     "publicKey": public_key,
@@ -593,7 +656,7 @@ class BetterAuthClient:
             self.args.paths.session.create, finish_message
         )
 
-        finish_response = FinishAuthenticationResponse.parse(finish_reply)
+        finish_response = CreateSessionResponse.parse(finish_reply)
         await self._verify_response(
             finish_response,
             finish_response.payload["access"]["serverIdentity"],
@@ -608,7 +671,7 @@ class BetterAuthClient:
             finish_response.payload["response"]["access"]["token"]
         )
 
-    async def refresh_access_token(self) -> None:
+    async def refresh_session(self) -> None:
         """Refresh the access token.
 
         This method rotates the access key and obtains a new access token.
@@ -634,7 +697,7 @@ class BetterAuthClient:
         nonce = await self.args.crypto.noncer.generate128()
 
         # Create and sign the request
-        request = RefreshAccessTokenRequest(
+        request = RefreshSessionRequest(
             {
                 "access": {
                     "publicKey": public_key,
@@ -651,7 +714,7 @@ class BetterAuthClient:
         # Send request and parse response
         reply = await self.args.io.network.send_request(self.args.paths.session.refresh, message)
 
-        response = RefreshAccessTokenResponse.parse(reply)
+        response = RefreshSessionResponse.parse(reply)
         await self._verify_response(response, response.payload["access"]["serverIdentity"])
 
         # Verify nonce matches
@@ -660,69 +723,6 @@ class BetterAuthClient:
 
         # Store new access token
         await self.args.store.token.access.store(response.payload["response"]["access"]["token"])
-
-    async def recover_account(
-        self, identity: str, recovery_key: ISigningKey, recovery_hash: str
-    ) -> None:
-        """Recover an account using the recovery key.
-
-        This method allows account recovery when all devices are lost or
-        compromised. It uses the recovery key to prove ownership and
-        registers a new device.
-
-        Steps:
-        1. Initialize new authentication keys for this device
-        2. Generate new device identifier
-        3. Create and sign recovery request with recovery key
-        4. Send to server
-        5. Verify response
-        6. Store identity and device
-
-        Args:
-            identity: The identity identifier to recover.
-            recovery_key: The recovery signing key for this identity.
-
-        Raises:
-            VerificationError: If response verification fails.
-            AuthenticationError: If nonce mismatch or recovery key invalid.
-            StorageError: If storage operations fail.
-            NetworkError: If network communication fails.
-        """
-        # Initialize new authentication keys
-        _, public_key, rotation_hash = await self.args.store.key.authentication.initialize()
-        device = await self.args.crypto.hasher.sum(public_key)
-        nonce = await self.args.crypto.noncer.generate128()
-
-        request = RecoverAccountRequest(
-            {
-                "authentication": {
-                    "device": device,
-                    "identity": identity,
-                    "publicKey": public_key,
-                    "recoveryHash": recovery_hash,
-                    "recoveryKey": await recovery_key.public(),
-                    "rotationHash": rotation_hash,
-                }
-            },
-            nonce,
-        )
-
-        await request.sign(recovery_key)
-        message = await request.serialize()
-
-        # Send request and parse response
-        reply = await self.args.io.network.send_request(self.args.paths.account.recover, message)
-
-        response = RecoverAccountResponse.parse(reply)
-        await self._verify_response(response, response.payload["access"]["serverIdentity"])
-
-        # Verify nonce matches
-        if response.payload["access"]["nonce"] != nonce:
-            raise AuthenticationError("incorrect nonce")
-
-        # Store identity and device
-        await self.args.store.identifier.identity.store(identity)
-        await self.args.store.identifier.device.store(device)
 
     async def make_access_request(self, path: str, request: Any) -> str:
         """Make an authenticated request to the server.

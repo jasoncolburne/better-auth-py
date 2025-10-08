@@ -106,9 +106,9 @@ async def execute_flow(
     verification_key_store: IVerificationKeyStore,
 ) -> None:
     """Execute the standard authentication flow."""
-    await better_auth_client.rotate_authentication_key()
-    await better_auth_client.authenticate()
-    await better_auth_client.refresh_access_token()
+    await better_auth_client.rotate_device()
+    await better_auth_client.create_session()
+    await better_auth_client.refresh_session()
 
     await _test_access(better_auth_client, ecc_verifier, verification_key_store)
 
@@ -442,7 +442,7 @@ async def test_detects_mismatched_access_nonce(client_components):
     await client.create_account(recovery_hash)
 
     with pytest.raises(Exception) as exc_info:
-        await client.authenticate()
+        await client.create_session()
         message = {"foo": "bar", "bar": "foo"}
         await client.make_access_request("/bad/nonce", message)
 

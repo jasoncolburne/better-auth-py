@@ -196,15 +196,15 @@ class Server:
         """Handle device unlinking requests."""
         return await self._wrap_response(body, self.ba.unlink_device)
 
-    async def start_authentication(self, body: bytes) -> tuple[int, str]:
+    async def request_session(self, body: bytes) -> tuple[int, str]:
         """Handle authentication start requests."""
-        return await self._wrap_response(body, self.ba.start_authentication)
+        return await self._wrap_response(body, self.ba.request_session)
 
-    async def finish_authentication(self, body: bytes) -> tuple[int, str]:
+    async def create_session(self, body: bytes) -> tuple[int, str]:
         """Handle authentication finish requests."""
 
         async def handler(message: str) -> str:
-            return await self.ba.finish_authentication(
+            return await self.ba.create_session(
                 message,
                 MockTokenAttributes(
                     permissionsByRole={
@@ -217,11 +217,11 @@ class Server:
 
     async def rotate_authentication(self, body: bytes) -> tuple[int, str]:
         """Handle authentication key rotation requests."""
-        return await self._wrap_response(body, self.ba.rotate_authentication_key)
+        return await self._wrap_response(body, self.ba.rotate_device)
 
     async def rotate_access(self, body: bytes) -> tuple[int, str]:
         """Handle access token refresh requests."""
-        return await self._wrap_response(body, self.ba.refresh_access_token)
+        return await self._wrap_response(body, self.ba.refresh_session)
 
     async def response_key(self, body: bytes) -> tuple[int, str]:
         """Handle server response key requests."""
@@ -304,8 +304,8 @@ class RequestHandler(BaseHTTPRequestHandler):
         routes = {
             "/account/create": self.server_instance.create,
             "/account/recover": self.server_instance.recover,
-            "/session/request": self.server_instance.start_authentication,
-            "/session/create": self.server_instance.finish_authentication,
+            "/session/request": self.server_instance.request_session,
+            "/session/create": self.server_instance.create_session,
             "/session/refresh": self.server_instance.rotate_access,
             "/device/rotate": self.server_instance.rotate_authentication,
             "/device/link": self.server_instance.link,

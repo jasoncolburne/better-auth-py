@@ -264,16 +264,16 @@ class MockNetworkServer(INetwork):
             return await self.better_auth_server.unlink_device(message)
 
         elif path == self.paths["device"]["rotate"]:
-            return await self.better_auth_server.rotate_authentication_key(message)
+            return await self.better_auth_server.rotate_device(message)
 
         elif path == self.paths["session"]["request"]:
-            return await self.better_auth_server.start_authentication(message)
+            return await self.better_auth_server.request_session(message)
 
         elif path == self.paths["session"]["create"]:
-            return await self.better_auth_server.finish_authentication(message, self.attributes)
+            return await self.better_auth_server.create_session(message, self.attributes)
 
         elif path == self.paths["session"]["refresh"]:
-            return await self.better_auth_server.refresh_access_token(message)
+            return await self.better_auth_server.refresh_session(message)
 
         elif path == "/foo/bar":
             # Test endpoint for successful access
@@ -355,9 +355,9 @@ async def execute_flow(
     Raises:
         Exception: If any step fails.
     """
-    await better_auth_client.rotate_authentication_key()
-    await better_auth_client.authenticate()
-    await better_auth_client.refresh_access_token()
+    await better_auth_client.rotate_device()
+    await better_auth_client.create_session()
+    await better_auth_client.refresh_session()
 
     await verify_access(better_auth_client, ecc_verifier, crypto_keys)
 
@@ -1283,7 +1283,7 @@ async def test_detects_tampered_access_tokens(
     token_encoder = TokenEncoder()
 
     with pytest.raises(Exception) as exc_info:
-        await better_auth_client.authenticate()
+        await better_auth_client.create_session()
         token = await access_token_store.get()
 
         # Tamper with the token by modifying the identity field
@@ -1362,7 +1362,7 @@ async def test_detects_mismatched_access_nonce(
     await better_auth_client.create_account(recovery_hash)
 
     with pytest.raises(Exception) as exc_info:
-        await better_auth_client.authenticate()
+        await better_auth_client.create_session()
 
         # Make request to endpoint that returns wrong nonce
         message = {"foo": "bar", "bar": "foo"}
