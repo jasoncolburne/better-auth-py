@@ -86,7 +86,7 @@ AUTHENTICATION_PATHS = {
     },
     "session": {
         "request": "/session/request",
-        "connect": "/session/connect",
+        "create": "/session/create",
         "refresh": "/session/refresh",
     },
     "device": {
@@ -269,7 +269,7 @@ class MockNetworkServer(INetwork):
         elif path == self.paths["session"]["request"]:
             return await self.better_auth_server.start_authentication(message)
 
-        elif path == self.paths["session"]["connect"]:
+        elif path == self.paths["session"]["create"]:
             return await self.better_auth_server.finish_authentication(message, self.attributes)
 
         elif path == self.paths["session"]["refresh"]:

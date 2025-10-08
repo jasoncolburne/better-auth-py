@@ -20,7 +20,7 @@ class SessionPathsDict(TypedDict):
     """Session endpoint paths."""
 
     request: str
-    connect: str
+    create: str
     refresh: str
 
 
@@ -49,7 +49,7 @@ class IAuthenticationPaths(Protocol):
         """Session endpoint paths.
 
         Returns:
-            Dictionary containing 'request', 'connect', and 'refresh' paths.
+            Dictionary containing 'request', 'create', and 'refresh' paths.
         """
         ...
 
@@ -82,12 +82,12 @@ class SessionPaths:
 
     Attributes:
         request: Path for session request.
-        connect: Path for session connect.
+        create: Path for session create.
         refresh: Path for session refresh.
     """
 
     request: str
-    connect: str
+    create: str
     refresh: str
 
 

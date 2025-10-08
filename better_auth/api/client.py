@@ -590,7 +590,7 @@ class BetterAuthClient:
         await finish_request.sign(await self.args.store.key.authentication.signer())
         finish_message = await finish_request.serialize()
         finish_reply = await self.args.io.network.send_request(
-            self.args.paths.session.connect, finish_message
+            self.args.paths.session.create, finish_message
         )
 
         finish_response = FinishAuthenticationResponse.parse(finish_reply)

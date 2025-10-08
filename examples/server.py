@@ -305,7 +305,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             "/account/create": self.server_instance.create,
             "/account/recover": self.server_instance.recover,
             "/session/request": self.server_instance.start_authentication,
-            "/session/connect": self.server_instance.finish_authentication,
+            "/session/create": self.server_instance.finish_authentication,
             "/session/refresh": self.server_instance.rotate_access,
             "/device/rotate": self.server_instance.rotate_authentication,
             "/device/link": self.server_instance.link,
