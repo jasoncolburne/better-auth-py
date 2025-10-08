@@ -69,6 +69,17 @@ class ITokenEncoder(Protocol):
         """
         ...
 
+    def signature_length(self, token: str) -> int:
+        """Get the signature length from a token.
+
+        Args:
+            token: The token to extract signature length from.
+
+        Returns:
+            The signature length in characters.
+        """
+        ...
+
 
 class IIdentityVerifier(Protocol):
     """Interface for identity verification operations."""

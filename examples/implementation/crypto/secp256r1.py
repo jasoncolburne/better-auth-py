@@ -139,6 +139,17 @@ class Secp256r1(ISigningKey):
         # Remove the first 2 characters (from padding) and add CESR prefix
         return f"0I{base64_str[2:]}"
 
+    async def identity(self) -> str:
+        """Get the identity (same as public key for secp256r1).
+
+        Returns:
+            A CESR-encoded identity string starting with "1AAI".
+
+        Raises:
+            ValueError: If the key pair has not been generated.
+        """
+        return await self.public()
+
     async def public(self) -> str:
         """Get the public key.
 

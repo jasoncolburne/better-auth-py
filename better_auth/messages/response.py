@@ -26,7 +26,7 @@ class ServerResponse(SignableMessage, Generic[T]):
     {
         "access": {
             "nonce": "<nonce>",
-            "responseKeyHash": "<hash>"
+            "serverIdentity": "<identity>"
         },
         "response": <T>
     }
@@ -39,19 +39,19 @@ class ServerResponse(SignableMessage, Generic[T]):
         signature: Optional cryptographic signature.
     """
 
-    def __init__(self, response: T, response_key_hash: str, nonce: str) -> None:
+    def __init__(self, response: T, server_identity: str, nonce: str) -> None:
         """Initialize a server response.
 
         Args:
             response: The response payload.
-            response_key_hash: Hash of the response key for verification.
+            server_identity: Identity of the server for verification.
             nonce: The nonce for replay protection.
         """
         super().__init__()
 
         access: Dict[str, str] = {
             "nonce": nonce,
-            "responseKeyHash": response_key_hash,
+            "serverIdentity": server_identity,
         }
 
         self.payload: Dict[str, Any] = {
@@ -69,7 +69,7 @@ class ServerResponse(SignableMessage, Generic[T]):
         Args:
             message: The serialized JSON message string.
             constructor: A constructor function that takes (response,
-                response_key_hash, nonce) and returns an instance of the
+                server_identity, nonce) and returns an instance of the
                 appropriate ServerResponse subclass.
 
         Returns:
@@ -83,11 +83,11 @@ class ServerResponse(SignableMessage, Generic[T]):
         json_data = json.loads(message)
 
         response_data = json_data["payload"]["response"]
-        response_key_hash = json_data["payload"]["access"]["responseKeyHash"]
+        server_identity = json_data["payload"]["access"]["serverIdentity"]
         nonce = json_data["payload"]["access"]["nonce"]
         signature = json_data.get("signature")
 
-        result = constructor(response_data, response_key_hash, nonce)
+        result = constructor(response_data, server_identity, nonce)
         result.signature = signature
 
         return result

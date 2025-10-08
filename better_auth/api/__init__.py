@@ -15,7 +15,6 @@ from better_auth.api.client import (
     TokenStoreConfig,
 )
 from better_auth.api.server import (
-    AccessPublicKeyConfig,
     AccessStoreConfig,
     AccessVerifier,
     AccessVerifierConfig,
@@ -55,7 +54,6 @@ __all__ = [
     "RecoveryStoreConfig",
     # AccessVerifier configuration types
     "AccessVerifierConfig",
-    "AccessPublicKeyConfig",
     "AccessVerifierCryptoConfig",
     "AccessVerifierEncodingConfig",
     "AccessVerifierStorageConfig",

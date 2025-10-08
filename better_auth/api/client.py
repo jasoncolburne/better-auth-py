@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from better_auth.exceptions import AuthenticationError, VerificationError
+from better_auth.exceptions import AuthenticationError
 from better_auth.interfaces import (
     IAuthenticationPaths,
     IClientRotatingKeyStore,
@@ -20,7 +20,7 @@ from better_auth.interfaces import (
     INoncer,
     ISigningKey,
     ITimestamper,
-    IVerificationKey,
+    IVerificationKeyStore,
 )
 from better_auth.messages import (
     AccessRequest,
@@ -50,10 +50,10 @@ class PublicKeyConfig:
     """Configuration for public keys.
 
     Attributes:
-        response: Verification key for server responses.
+        response: Verification key store for server responses.
     """
 
-    response: IVerificationKey
+    response: IVerificationKeyStore
 
 
 @dataclass
@@ -247,27 +247,23 @@ class BetterAuthClient:
         """
         return await self.args.store.identifier.device.get()
 
-    async def _verify_response(self, response: Any, public_key_hash: str) -> None:
-        """Verify a server response signature and key hash.
+    async def _verify_response(self, response: Any, server_identity: str) -> None:
+        """Verify a server response signature using the verification key store.
 
         This internal method verifies that:
-        1. The server's public key hash matches the expected hash
-        2. The response signature is valid
+        1. The server identity is valid (has a verification key in the store)
+        2. The response signature is valid for that server's key
 
         Args:
             response: The response object (must have verify method).
-            public_key_hash: The expected hash of the server's public key.
+            server_identity: The server identity to look up in the verification key store.
 
         Raises:
-            VerificationError: If hash mismatch or signature verification fails.
+            VerificationError: If server identity not found or signature verification fails.
         """
-        public_key = await self.args.crypto.public_key.response.public()
-        hash_value = await self.args.crypto.hasher.sum(public_key)
-
-        if hash_value != public_key_hash:
-            raise VerificationError("hash mismatch")
-
-        verifier = self.args.crypto.public_key.response.verifier()
+        verification_key = await self.args.crypto.public_key.response.get(server_identity)
+        public_key = await verification_key.public()
+        verifier = verification_key.verifier()
         await response.verify(verifier, public_key)
 
     async def create_account(self, recovery_hash: str) -> None:
@@ -320,7 +316,7 @@ class BetterAuthClient:
         reply = await self.args.io.network.send_request(self.args.paths.account.create, message)
 
         response = CreationResponse.parse(reply)
-        await self._verify_response(response, response.payload["access"]["responseKeyHash"])
+        await self._verify_response(response, response.payload["access"]["serverIdentity"])
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
@@ -432,7 +428,7 @@ class BetterAuthClient:
         reply = await self.args.io.network.send_request(self.args.paths.rotate.link, message)
 
         response = LinkDeviceResponse.parse(reply)
-        await self._verify_response(response, response.payload["access"]["responseKeyHash"])
+        await self._verify_response(response, response.payload["access"]["serverIdentity"])
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
@@ -470,7 +466,7 @@ class BetterAuthClient:
         reply = await self.args.io.network.send_request(self.args.paths.rotate.unlink, message)
 
         response = UnlinkDeviceResponse.parse(reply)
-        await self._verify_response(response, response.payload["access"]["responseKeyHash"])
+        await self._verify_response(response, response.payload["access"]["serverIdentity"])
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
@@ -521,7 +517,7 @@ class BetterAuthClient:
         )
 
         response = RotateAuthenticationKeyResponse.parse(reply)
-        await self._verify_response(response, response.payload["access"]["responseKeyHash"])
+        await self._verify_response(response, response.payload["access"]["serverIdentity"])
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
@@ -567,7 +563,7 @@ class BetterAuthClient:
 
         start_response = StartAuthenticationResponse.parse(start_reply)
         await self._verify_response(
-            start_response, start_response.payload["access"]["responseKeyHash"]
+            start_response, start_response.payload["access"]["serverIdentity"]
         )
 
         # Verify start nonce matches
@@ -602,7 +598,7 @@ class BetterAuthClient:
         finish_response = FinishAuthenticationResponse.parse(finish_reply)
         await self._verify_response(
             finish_response,
-            finish_response.payload["access"]["responseKeyHash"],
+            finish_response.payload["access"]["serverIdentity"],
         )
 
         # Verify finish nonce matches
@@ -658,7 +654,7 @@ class BetterAuthClient:
         reply = await self.args.io.network.send_request(self.args.paths.rotate.access, message)
 
         response = RefreshAccessTokenResponse.parse(reply)
-        await self._verify_response(response, response.payload["access"]["responseKeyHash"])
+        await self._verify_response(response, response.payload["access"]["serverIdentity"])
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
@@ -720,7 +716,7 @@ class BetterAuthClient:
         reply = await self.args.io.network.send_request(self.args.paths.rotate.recover, message)
 
         response = RecoverAccountResponse.parse(reply)
-        await self._verify_response(response, response.payload["access"]["responseKeyHash"])
+        await self._verify_response(response, response.payload["access"]["serverIdentity"])
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
