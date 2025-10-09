@@ -4,6 +4,7 @@ This module provides RFC3339 timestamp formatting that matches the TypeScript
 implementation's nanosecond precision format.
 """
 
+import re
 from datetime import datetime, timezone
 
 from better_auth.interfaces.encoding import ITimestamper
@@ -79,7 +80,7 @@ class Rfc3339Nano(ITimestamper):
 
         # Remove nanosecond precision (keep only microseconds) for Python parsing
         # Convert nanoseconds (9 digits) to microseconds (6 digits) by removing the last 3 digits
-        timestamp_str = when.replace("000Z", "Z")
+        timestamp_str = re.sub(r"\d{3}Z", "Z", when)
 
         # Replace 'Z' with '+00:00' for fromisoformat compatibility
         if timestamp_str.endswith("Z"):
