@@ -4,6 +4,7 @@ This module provides RFC3339 timestamp formatting that matches the TypeScript
 implementation's nanosecond precision format.
 """
 
+import re
 from datetime import datetime, timezone
 
 from better_auth.interfaces.encoding import ITimestamper
@@ -13,16 +14,16 @@ class Rfc3339Nano(ITimestamper):
     """RFC3339 timestamp formatter with nanosecond precision.
 
     This class formats datetime objects to RFC3339 strings with nanosecond
-    precision. Since Python's datetime.isoformat() provides microsecond precision,
-    this implementation pads with zeros to match the nanosecond format used in
-    the TypeScript implementation (e.g., 2025-01-01T12:00:00.123456000Z).
+    precision. Since Python's datetime.isoformat() provides microsecond precision
+    (6 digits), this implementation extends it to nanoseconds (9 digits) by appending
+    three zeros (e.g., 2025-01-01T12:00:00.123456000Z).
     """
 
     def format(self, when: datetime) -> str:
         """Format a datetime object as an RFC3339 string with nanosecond precision.
 
-        Converts a datetime to ISO format and extends microseconds to nanoseconds
-        by appending three zeros (000) before the 'Z' timezone indicator.
+        Converts a datetime to ISO format and extends microseconds (6 digits) to
+        nanoseconds (9 digits) by appending three zeros before the 'Z' timezone indicator.
 
         Args:
             when: The datetime to format.
@@ -55,8 +56,8 @@ class Rfc3339Nano(ITimestamper):
             # If no timezone info in the string, add Z
             iso_string = iso_string + "Z"
 
-        # Now replace Z with 000000Z to extend microseconds to nanoseconds
-        return iso_string.replace("Z", "000000Z")
+        # Now replace Z with 000Z to extend microseconds (6 digits) to nanoseconds (9 digits)
+        return iso_string.replace("Z", "000Z")
 
     def parse(self, when: str | datetime) -> datetime:
         """Parse a timestamp string or datetime into a datetime object.
@@ -78,8 +79,8 @@ class Rfc3339Nano(ITimestamper):
             return when
 
         # Remove nanosecond precision (keep only microseconds) for Python parsing
-        # Convert 000000Z to Z (remove the extra zeros)
-        timestamp_str = when.replace("000000Z", "Z").replace("000Z", "Z")
+        # Convert nanoseconds (9 digits) to microseconds (6 digits) by removing the last 3 digits
+        timestamp_str = re.sub(r"\d{3}Z", "Z", when)
 
         # Replace 'Z' with '+00:00' for fromisoformat compatibility
         if timestamp_str.endswith("Z"):
