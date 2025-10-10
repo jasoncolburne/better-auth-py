@@ -244,12 +244,13 @@ class BetterAuthServer:
             request.payload["request"]["authentication"]["recoveryHash"],
         )
 
-        device_hash = await self._config.crypto.hasher.sum(
+        device = await self._config.crypto.hasher.sum(
             request.payload["request"]["authentication"]["publicKey"]
+            + request.payload["request"]["authentication"]["rotationHash"]
         )
 
-        if device_hash != request.payload["request"]["authentication"]["device"]:
-            raise AuthenticationError("malformed device")
+        if device != request.payload["request"]["authentication"]["device"]:
+            raise AuthenticationError("bad device derivation")
 
         await self._config.store.recovery.hash.register(
             identity, request.payload["request"]["authentication"]["recoveryHash"]
@@ -316,6 +317,14 @@ class BetterAuthServer:
             != request.payload["request"]["authentication"]["identity"]
         ):
             raise AuthenticationError("mismatched identities")
+
+        device = await self._config.crypto.hasher.sum(
+            link_container.payload["authentication"]["publicKey"]
+            + link_container.payload["authentication"]["rotationHash"]
+        )
+
+        if device != link_container.payload["authentication"]["device"]:
+            raise AuthenticationError("bad device derivation")
 
         await self._config.store.authentication.key.rotate(
             request.payload["request"]["authentication"]["identity"],
@@ -653,6 +662,14 @@ class BetterAuthServer:
             self._config.crypto.verifier,
             request.payload["request"]["authentication"]["recoveryKey"],
         )
+
+        device = await self._config.crypto.hasher.sum(
+            request.payload["request"]["authentication"]["publicKey"]
+            + request.payload["request"]["authentication"]["rotationHash"]
+        )
+
+        if device != request.payload["request"]["authentication"]["device"]:
+            raise AuthenticationError("bad device derivation")
 
         hash_value = await self._config.crypto.hasher.sum(
             request.payload["request"]["authentication"]["recoveryKey"]
