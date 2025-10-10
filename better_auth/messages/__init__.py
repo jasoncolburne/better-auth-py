@@ -8,6 +8,8 @@ from better_auth.messages.access import AccessRequest, AccessToken
 from better_auth.messages.account import (
     CreateAccountRequest,
     CreateAccountResponse,
+    DeleteAccountRequest,
+    DeleteAccountResponse,
     RecoverAccountRequest,
     RecoverAccountResponse,
 )
@@ -45,6 +47,8 @@ __all__ = [
     # Account
     "CreateAccountRequest",
     "CreateAccountResponse",
+    "DeleteAccountRequest",
+    "DeleteAccountResponse",
     "RecoverAccountRequest",
     "RecoverAccountResponse",
     # Device
