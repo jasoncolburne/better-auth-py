@@ -28,6 +28,8 @@ from better_auth.messages import (
     CreateAccountResponse,
     CreateSessionRequest,
     CreateSessionResponse,
+    DeleteAccountRequest,
+    DeleteAccountResponse,
     LinkContainer,
     LinkDeviceRequest,
     LinkDeviceResponse,
@@ -528,6 +530,54 @@ class BetterAuthClient:
         reply = await self.args.io.network.send_request(self.args.paths.device.unlink, message)
 
         response = UnlinkDeviceResponse.parse(reply)
+        await self._verify_response(response, response.payload["access"]["serverIdentity"])
+
+        # Verify nonce matches
+        if response.payload["access"]["nonce"] != nonce:
+            raise AuthenticationError("incorrect nonce")
+
+        await self.args.store.key.authentication.rotate()
+
+    async def delete_account(self) -> None:
+        """Delete the account and all associated devices.
+
+        This method permanently deletes the account by:
+        1. Generating a nonce for replay protection
+        2. Getting the next signing key and rotation hash
+        3. Creating and signing a delete account request
+        4. Sending the request to the server
+        5. Verifying the response
+        6. Rotating the authentication key
+
+        Raises:
+            VerificationError: If response verification fails.
+            AuthenticationError: If nonce mismatch occurs.
+            StorageError: If storage operations fail.
+            NetworkError: If network communication fails.
+        """
+        nonce = await self.args.crypto.noncer.generate128()
+        signing_key, rotation_hash = await self.args.store.key.authentication.next()
+
+        # Create and sign the request
+        request = DeleteAccountRequest(
+            {
+                "authentication": {
+                    "device": await self.args.store.identifier.device.get(),
+                    "identity": await self.args.store.identifier.identity.get(),
+                    "publicKey": await signing_key.public(),
+                    "rotationHash": rotation_hash,
+                }
+            },
+            nonce,
+        )
+
+        await request.sign(signing_key)
+        message = await request.serialize()
+
+        # Send request and parse response
+        reply = await self.args.io.network.send_request(self.args.paths.account.delete, message)
+
+        response = DeleteAccountResponse.parse(reply)
         await self._verify_response(response, response.payload["access"]["serverIdentity"])
 
         # Verify nonce matches

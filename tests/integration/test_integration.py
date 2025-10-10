@@ -48,6 +48,7 @@ authentication_paths = AuthenticationPaths(
     account=AccountPaths(
         create="/account/create",
         recover="/account/recover",
+        delete="/account/delete",
     ),
     session=SessionPaths(
         request="/session/request",

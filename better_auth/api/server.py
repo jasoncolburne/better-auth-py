@@ -38,6 +38,8 @@ from better_auth.messages import (
     CreateAccountResponse,
     CreateSessionRequest,
     CreateSessionResponse,
+    DeleteAccountRequest,
+    DeleteAccountResponse,
     LinkContainer,
     LinkDeviceRequest,
     LinkDeviceResponse,
@@ -693,6 +695,53 @@ class BetterAuthServer:
         )
 
         response = RecoverAccountResponse(
+            {},
+            await self._config.crypto.key_pair.response.identity(),
+            request.payload["access"]["nonce"],
+        )
+
+        await response.sign(self._config.crypto.key_pair.response)
+
+        return await response.serialize()
+
+    async def delete_account(self, message: str) -> str:
+        """Delete an account and all associated devices.
+
+        This method:
+        1. Parses and verifies the delete account request
+        2. Rotates the authentication key for the requesting device
+        3. Deletes the identity and all associated devices
+        4. Returns a signed response
+
+        Args:
+            message: Serialized DeleteAccountRequest from the client.
+
+        Returns:
+            Serialized DeleteAccountResponse signed by the server.
+
+        Raises:
+            InvalidMessageError: If the message is malformed.
+            VerificationError: If signature verification fails.
+            AuthenticationError: If identity or device not found.
+        """
+        request = DeleteAccountRequest.parse(message)
+        await request.verify(
+            self._config.crypto.verifier,
+            request.payload["request"]["authentication"]["publicKey"],
+        )
+
+        await self._config.store.authentication.key.rotate(
+            request.payload["request"]["authentication"]["identity"],
+            request.payload["request"]["authentication"]["device"],
+            request.payload["request"]["authentication"]["publicKey"],
+            request.payload["request"]["authentication"]["rotationHash"],
+        )
+
+        await self._config.store.authentication.key.delete_identity(
+            request.payload["request"]["authentication"]["identity"]
+        )
+
+        response = DeleteAccountResponse(
             {},
             await self._config.crypto.key_pair.response.identity(),
             request.payload["access"]["nonce"],

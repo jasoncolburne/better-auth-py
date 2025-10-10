@@ -188,6 +188,10 @@ class Server:
         """Handle account recovery requests."""
         return await self._wrap_response(body, self.ba.recover_account)
 
+    async def delete(self, body: bytes) -> tuple[int, str]:
+        """Handle account deletion requests."""
+        return await self._wrap_response(body, self.ba.delete_account)
+
     async def link(self, body: bytes) -> tuple[int, str]:
         """Handle device linking requests."""
         return await self._wrap_response(body, self.ba.link_device)
@@ -304,6 +308,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         routes = {
             "/account/create": self.server_instance.create,
             "/account/recover": self.server_instance.recover,
+            "/account/delete": self.server_instance.delete,
             "/session/request": self.server_instance.request_session,
             "/session/create": self.server_instance.create_session,
             "/session/refresh": self.server_instance.rotate_access,

@@ -167,6 +167,26 @@ class ServerAuthenticationKeyStore(IServerAuthenticationKeyStore):
         for token in tokens_to_remove:
             del self._data_by_token[token]
 
+    async def delete_identity(self, identity: str) -> None:
+        """Delete an identity and all associated devices.
+
+        Args:
+            identity: The identity to delete.
+
+        Raises:
+            RuntimeError: If identity not found.
+        """
+        if identity not in self._identities:
+            raise RuntimeError("identity not found")
+
+        # Remove all device tokens for this identity
+        tokens_to_remove = [token for token in self._data_by_token if token.startswith(identity)]
+        for token in tokens_to_remove:
+            del self._data_by_token[token]
+
+        # Remove the identity itself
+        self._identities.remove(identity)
+
 
 class ServerRecoveryHashStore(IServerRecoveryHashStore):
     """In-memory implementation of recovery hash storage for servers.

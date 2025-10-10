@@ -14,6 +14,7 @@ class AccountPathsDict(TypedDict):
 
     create: str
     recover: str
+    delete: str
 
 
 class SessionPathsDict(TypedDict):
@@ -40,7 +41,7 @@ class IAuthenticationPaths(Protocol):
         """Account endpoint paths.
 
         Returns:
-            Dictionary containing 'create' and 'recover' paths.
+            Dictionary containing 'create', 'recover', and 'delete' paths.
         """
         ...
 
@@ -70,10 +71,12 @@ class AccountPaths:
     Attributes:
         create: Path for account creation.
         recover: Path for account recovery.
+        delete: Path for account deletion.
     """
 
     create: str
     recover: str
+    delete: str
 
 
 @dataclass

@@ -190,3 +190,89 @@ class RecoverAccountResponse(ServerResponse[Dict[str, Any]]):
             KeyError: If required fields are missing from the message.
         """
         return ServerResponse._parse(message, RecoverAccountResponse)
+
+
+class DeleteAccountRequest(ClientRequest[Dict[str, Any]]):
+    """Request message for deleting an account.
+
+    This message contains the authentication credentials to authorize account deletion.
+
+    The request payload structure is:
+    {
+        "authentication": {
+            "device": "<device_id>",
+            "identity": "<identity>",
+            "publicKey": "<public_key>",
+            "rotationHash": "<rotation_hash>"
+        }
+    }
+
+    Attributes:
+        payload: Dictionary containing access metadata and authentication data.
+        signature: Optional cryptographic signature.
+    """
+
+    def __init__(self, request: Dict[str, Any], nonce: str) -> None:
+        """Initialize a delete account request.
+
+        Args:
+            request: Dictionary containing the authentication data with keys:
+                - authentication: Dict containing device, identity, publicKey,
+                  and rotationHash.
+            nonce: The nonce for replay protection.
+        """
+        super().__init__(request, nonce)
+
+    @staticmethod
+    def parse(message: str) -> DeleteAccountRequest:
+        """Parse a serialized delete account request message.
+
+        Args:
+            message: The serialized JSON message string.
+
+        Returns:
+            A new DeleteAccountRequest instance with the parsed data and signature.
+
+        Raises:
+            json.JSONDecodeError: If the message is not valid JSON.
+            KeyError: If required fields are missing from the message.
+        """
+        return ClientRequest._parse(message, DeleteAccountRequest)
+
+
+class DeleteAccountResponse(ServerResponse[Dict[str, Any]]):
+    """Response message for account deletion.
+
+    This message confirms successful account deletion. The response payload
+    is an empty dictionary.
+
+    Attributes:
+        payload: Dictionary containing access metadata and empty response.
+        signature: Optional cryptographic signature.
+    """
+
+    def __init__(self, response: Dict[str, Any], response_key_hash: str, nonce: str) -> None:
+        """Initialize a delete account response.
+
+        Args:
+            response: Empty dictionary response payload.
+            response_key_hash: Hash of the response key for verification.
+            nonce: The nonce for replay protection.
+        """
+        super().__init__(response, response_key_hash, nonce)
+
+    @staticmethod
+    def parse(message: str) -> DeleteAccountResponse:
+        """Parse a serialized delete account response message.
+
+        Args:
+            message: The serialized JSON message string.
+
+        Returns:
+            A new DeleteAccountResponse instance with the parsed data and signature.
+
+        Raises:
+            json.JSONDecodeError: If the message is not valid JSON.
+            KeyError: If required fields are missing from the message.
+        """
+        return ServerResponse._parse(message, DeleteAccountResponse)

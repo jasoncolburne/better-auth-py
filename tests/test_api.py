@@ -83,6 +83,7 @@ AUTHENTICATION_PATHS = {
     "account": {
         "create": "/account/create",
         "recover": "/account/recover",
+        "delete": "/account/delete",
     },
     "session": {
         "request": "/session/request",

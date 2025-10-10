@@ -203,6 +203,17 @@ class IServerAuthenticationKeyStore(Protocol):
         """
         ...
 
+    async def delete_identity(self, identity: str) -> None:
+        """Delete an identity and all associated devices.
+
+        Args:
+            identity: The identity to delete.
+
+        Raises:
+            Exception: If identity does not exist.
+        """
+        ...
+
 
 class IServerRecoveryHashStore(Protocol):
     """Interface for server-side recovery hash storage."""
