@@ -463,9 +463,7 @@ class BetterAuthClient:
         # Parse the link container
         container = LinkContainer.parse(link_container)
         nonce = await self.args.crypto.noncer.generate128()
-
-        # Rotate authentication key
-        public_key, rotation_hash = await self.args.store.key.authentication.rotate()
+        signing_key, rotation_hash = await self.args.store.key.authentication.next()
 
         # Create and sign the request
         request = LinkDeviceRequest(
@@ -473,7 +471,7 @@ class BetterAuthClient:
                 "authentication": {
                     "device": await self.args.store.identifier.device.get(),
                     "identity": await self.args.store.identifier.identity.get(),
-                    "publicKey": public_key,
+                    "publicKey": await signing_key.public(),
                     "rotationHash": rotation_hash,
                 },
                 "link": {
@@ -484,7 +482,7 @@ class BetterAuthClient:
             nonce,
         )
 
-        await request.sign(await self.args.store.key.authentication.signer())
+        await request.sign(signing_key)
         message = await request.serialize()
 
         # Send request and parse response
@@ -497,23 +495,24 @@ class BetterAuthClient:
         if response.payload["access"]["nonce"] != nonce:
             raise AuthenticationError("incorrect nonce")
 
+        await self.args.store.key.authentication.rotate()
+
     async def unlink_device(self, device: str) -> None:
         nonce = await self.args.crypto.noncer.generate128()
+        signing_key, rotation_hash = await self.args.store.key.authentication.next()
 
-        # Rotate keys
-        public_key, rotation_hash = await self.args.store.key.authentication.rotate()
-
+        hash = rotation_hash
         if device == await self.args.store.identifier.device.get():
             # if we are disabling this device, prevent rotation but allow traceability
-            rotation_hash = await self.args.crypto.hasher.sum(rotation_hash)
+            hash = await self.args.crypto.hasher.sum(rotation_hash)
 
         request = UnlinkDeviceRequest(
             {
                 "authentication": {
                     "device": await self.args.store.identifier.device.get(),
                     "identity": await self.args.store.identifier.identity.get(),
-                    "publicKey": public_key,
-                    "rotationHash": rotation_hash,
+                    "publicKey": await signing_key.public(),
+                    "rotationHash": hash,
                 },
                 "link": {
                     "device": device,
@@ -522,7 +521,7 @@ class BetterAuthClient:
             nonce,
         )
 
-        await request.sign(await self.args.store.key.authentication.signer())
+        await request.sign(signing_key)
         message = await request.serialize()
 
         # Send request and parse response
@@ -534,6 +533,8 @@ class BetterAuthClient:
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
             raise AuthenticationError("incorrect nonce")
+
+        await self.args.store.key.authentication.rotate()
 
     async def rotate_device(self) -> None:
         """Rotate the authentication key for this device.
@@ -554,8 +555,7 @@ class BetterAuthClient:
             StorageError: If storage operations fail.
             NetworkError: If network communication fails.
         """
-        # Rotate keys
-        public_key, rotation_hash = await self.args.store.key.authentication.rotate()
+        signing_key, rotation_hash = await self.args.store.key.authentication.next()
         nonce = await self.args.crypto.noncer.generate128()
 
         # Create and sign the request
@@ -564,14 +564,14 @@ class BetterAuthClient:
                 "authentication": {
                     "device": await self.args.store.identifier.device.get(),
                     "identity": await self.args.store.identifier.identity.get(),
-                    "publicKey": public_key,
+                    "publicKey": await signing_key.public(),
                     "rotationHash": rotation_hash,
                 }
             },
             nonce,
         )
 
-        await request.sign(await self.args.store.key.authentication.signer())
+        await request.sign(signing_key)
         message = await request.serialize()
 
         # Send request and parse response
@@ -583,6 +583,8 @@ class BetterAuthClient:
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
             raise AuthenticationError("incorrect nonce")
+
+        await self.args.store.key.authentication.rotate()
 
     async def create_session(self) -> None:
         """Authenticate with the server and obtain an access token.
@@ -692,15 +694,14 @@ class BetterAuthClient:
             NetworkError: If network communication fails.
             ExpiredTokenError: If the current token is expired.
         """
-        # Rotate access keys
-        public_key, rotation_hash = await self.args.store.key.access.rotate()
+        signing_key, rotation_hash = await self.args.store.key.access.next()
         nonce = await self.args.crypto.noncer.generate128()
 
         # Create and sign the request
         request = RefreshSessionRequest(
             {
                 "access": {
-                    "publicKey": public_key,
+                    "publicKey": await signing_key.public(),
                     "rotationHash": rotation_hash,
                     "token": await self.args.store.token.access.get(),
                 }
@@ -708,7 +709,7 @@ class BetterAuthClient:
             nonce,
         )
 
-        await request.sign(await self.args.store.key.access.signer())
+        await request.sign(signing_key)
         message = await request.serialize()
 
         # Send request and parse response
@@ -723,6 +724,7 @@ class BetterAuthClient:
 
         # Store new access token
         await self.args.store.token.access.store(response.payload["response"]["access"]["token"])
+        await self.args.store.key.access.rotate()
 
     async def make_access_request(self, path: str, request: Any) -> str:
         """Make an authenticated request to the server.

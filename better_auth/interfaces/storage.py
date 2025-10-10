@@ -51,14 +51,27 @@ class IClientRotatingKeyStore(Protocol):
         """
         ...
 
-    async def rotate(self) -> tuple[str, str]:
-        """Rotate the keys.
+    async def next(self) -> tuple[ISigningKey, str]:
+        """Get the next signing key and rotation hash.
+
+        This should return the _next_ signing key and a hash of the subsequent key.
+        If no subsequent key exists yet, it should first be generated.
+
+        This facilitates a failed network request during a rotation operation.
 
         Returns:
-            A tuple of (public_key, rotation_hash).
+            A tuple of (key, rotation_hash).
+        """
+        ...
+
+    async def rotate(self) -> None:
+        """Commit the key rotation.
+
+        This is the commit operation of next().
 
         Raises:
-            Exception: If no keys exist.
+            Exception: If next() has not been called since the last call to
+                initialize() or rotate().
         """
         ...
 

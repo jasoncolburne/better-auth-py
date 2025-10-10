@@ -18,20 +18,22 @@ from ..crypto.secp256r1 import Secp256r1
 class ClientRotatingKeyStore(IClientRotatingKeyStore):
     """In-memory implementation of rotating key storage for clients.
 
-    This class manages a pair of signing keys (current and next) and supports
+    This class manages three signing keys (current, next, and future) and supports
     key rotation with hash chain validation. The identity is derived from the
     current public key, next key's rotation hash, and optional extra data.
 
     Attributes:
-        _current: The current signing key used for authentication.
-        _next: The next signing key to be used after rotation.
+        _current_key: The current signing key used for authentication.
+        _next_key: The next signing key to be used after rotation.
+        _future_key: The future signing key, prepared during next() operation.
         _hasher: Hasher instance for computing rotation hashes.
     """
 
     def __init__(self) -> None:
         """Initialize the rotating key store."""
-        self._current: Optional[ISigningKey] = None
-        self._next: Optional[ISigningKey] = None
+        self._current_key: Optional[ISigningKey] = None
+        self._next_key: Optional[ISigningKey] = None
+        self._future_key: Optional[ISigningKey] = None
         self._hasher: IHasher = Hasher()
 
     async def initialize(self, extra_data: str | None = None) -> tuple[str, str, str]:
@@ -59,8 +61,8 @@ class ClientRotatingKeyStore(IClientRotatingKeyStore):
         await current.generate()
         await next_key.generate()
 
-        self._current = current
-        self._next = next_key
+        self._current_key = current
+        self._next_key = next_key
 
         suffix = ""
         if extra_data is not None:
@@ -72,33 +74,49 @@ class ClientRotatingKeyStore(IClientRotatingKeyStore):
 
         return (identity, public_key, rotation_hash)
 
-    async def rotate(self) -> tuple[str, str]:
-        """Rotate the keys forward in the hash chain.
+    async def next(self) -> tuple[ISigningKey, str]:
+        """Get the next signing key and rotation hash.
 
-        Promotes the next key to current, generates a new next key, and computes
-        the new rotation hash. This maintains the hash chain where each rotation
-        hash is the hash of the next public key.
+        This prepares the future key if it doesn't exist yet, and returns
+        the next key along with the hash of the future key.
 
         Returns:
             A tuple containing:
-                - public_key: CESR-encoded new current public key (promoted from next)
-                - rotation_hash: Hash of the newly generated next public key
+                - key: The next signing key to use
+                - rotation_hash: Hash of the future public key
 
         Raises:
             RuntimeError: If initialize() has not been called first.
         """
-        if self._next is None:
+        if self._next_key is None:
             raise RuntimeError("call initialize() first")
 
-        next_key = Secp256r1()
-        await next_key.generate()
+        if self._future_key is None:
+            key = Secp256r1()
+            await key.generate()
+            self._future_key = key
 
-        self._current = self._next
-        self._next = next_key
+        rotation_hash = await self._hasher.sum(await self._future_key.public())
 
-        rotation_hash = await self._hasher.sum(await next_key.public())
+        return (self._next_key, rotation_hash)
 
-        return (await self._current.public(), rotation_hash)
+    async def rotate(self) -> None:
+        """Commit the key rotation.
+
+        Promotes next key to current, future key to next, and clears future key.
+
+        Raises:
+            RuntimeError: If initialize() or next() has not been called first.
+        """
+        if self._next_key is None:
+            raise RuntimeError("call initialize() first")
+
+        if self._future_key is None:
+            raise RuntimeError("call next() first")
+
+        self._current_key = self._next_key
+        self._next_key = self._future_key
+        self._future_key = None
 
     async def signer(self) -> ISigningKey:
         """Get the current signing key for authentication.
@@ -109,10 +127,10 @@ class ClientRotatingKeyStore(IClientRotatingKeyStore):
         Raises:
             RuntimeError: If initialize() has not been called first.
         """
-        if self._current is None:
+        if self._current_key is None:
             raise RuntimeError("call initialize() first")
 
-        return self._current
+        return self._current_key
 
 
 class ClientValueStore(IClientValueStore):
