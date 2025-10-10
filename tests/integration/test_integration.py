@@ -221,6 +221,7 @@ async def test_completes_auth_flows(client_components):
 
     await client.create_account(recovery_hash)
     await execute_flow(client, verifier, verification_key_store)
+    await client.delete_account()
 
 
 @pytest.mark.asyncio
