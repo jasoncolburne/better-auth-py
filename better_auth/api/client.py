@@ -290,7 +290,7 @@ class BetterAuthClient:
         identity, public_key, rotation_hash = await self.args.store.key.authentication.initialize(
             recovery_hash
         )
-        device = await self.args.crypto.hasher.sum(public_key)
+        device = await self.args.crypto.hasher.sum(public_key + rotation_hash)
 
         # Generate nonce for replay protection
         nonce = await self.args.crypto.noncer.generate128()
@@ -355,7 +355,7 @@ class BetterAuthClient:
         """
         # Initialize new authentication keys
         _, public_key, rotation_hash = await self.args.store.key.authentication.initialize()
-        device = await self.args.crypto.hasher.sum(public_key)
+        device = await self.args.crypto.hasher.sum(public_key + rotation_hash)
         nonce = await self.args.crypto.noncer.generate128()
 
         request = RecoverAccountRequest(
@@ -416,7 +416,7 @@ class BetterAuthClient:
         """
         # Initialize authentication keys (no recovery hash needed for linking)
         _, public_key, rotation_hash = await self.args.store.key.authentication.initialize()
-        device = await self.args.crypto.hasher.sum(public_key)
+        device = await self.args.crypto.hasher.sum(public_key + rotation_hash)
 
         # Store identity and device
         await self.args.store.identifier.identity.store(identity)
