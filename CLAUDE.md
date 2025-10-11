@@ -254,9 +254,21 @@ response = await server.handle_request(request)
 
 ### Installation
 ```bash
+# It's recommended to use a virtual environment
+python -m venv venv
+source venv/bin/activate      # On Windows: venv\Scripts\activate
+
 pip install -e .              # Install in development mode
 pip install -e ".[dev]"       # With dev dependencies
 ```
+
+### Running the Example Server
+```bash
+# Make sure you're in the virtual environment
+python -m examples.server
+```
+
+The example server provides an HTTP endpoint for integration testing with other language implementations.
 
 ### Testing
 ```bash
