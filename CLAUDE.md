@@ -19,6 +19,40 @@ This implementation includes **both client and server** components and was porte
 - Server Only: [Go](https://github.com/jasoncolburne/better-auth-go), [Ruby](https://github.com/jasoncolburne/better-auth-rb)
 - Client Only: [Swift](https://github.com/jasoncolburne/better-auth-swift), [Dart](https://github.com/jasoncolburne/better-auth-dart), [Kotlin](https://github.com/jasoncolburne/better-auth-kt)
 
+## Repository Structure
+
+This repository is a **git submodule** of the parent [better-auth](https://github.com/jasoncolburne/better-auth) specification repository. The parent repository includes all 8 language implementations as submodules and provides orchestration scripts for cross-implementation testing.
+
+### Standardized Build System
+
+All implementations use standardized `Makefile` targets for consistency:
+
+```bash
+make setup          # Create venv and install dependencies (pip install -e ".[dev]")
+make test           # Run tests (pytest)
+make type-check     # Run type checker (mypy better_auth)
+make lint           # Run linter (ruff check better_auth tests)
+make format         # Format code (black better_auth tests)
+make format-check   # Check formatting (black --check better_auth tests)
+make clean          # Clean artifacts (rm -rf venv build dist)
+make server         # Run example server (python -m examples.server)
+```
+
+### Parent Repository Orchestration
+
+The parent repository provides scripts in `scripts/` for running operations across all implementations:
+
+- `scripts/run-setup.sh` - Setup all implementations
+- `scripts/run-unit-tests.sh` - Run tests across all implementations
+- `scripts/run-type-checks.sh` - Run type checkers across all implementations
+- `scripts/run-lints.sh` - Run linters across all implementations
+- `scripts/run-format-checks.sh` - Check formatting across all implementations
+- `scripts/run-integration-tests.sh` - Run cross-language integration tests
+- `scripts/run-all-checks.sh` - Run all checks in sequence
+- `scripts/pull-repos.sh` - Update all submodules
+
+These scripts automatically skip implementations where tooling is not available.
+
 ## Architecture
 
 ### Directory Structure
