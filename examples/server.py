@@ -26,7 +26,7 @@ from better_auth.api.server import (
     RecoveryStoreConfig,
     StoreConfig,
 )
-from better_auth.messages import AccessRequest, ServerResponse
+from better_auth.messages import ServerResponse
 from .implementation.crypto import Hasher, Noncer, Secp256r1, Secp256r1Verifier
 from .implementation.encoding import IdentityVerifier, Rfc3339Nano, TokenEncoder
 from .implementation.storage import (
@@ -246,25 +246,20 @@ class Server:
             The serialized server response.
         """
         # Verify the access token
-        _, _ = await self.av.verify(message)
-
-        # Parse the access request
-        # request_data = json.loads(message)
-        request = AccessRequest[MockRequestPayload].parse(message)
+        request, _, nonce = await self.av.verify(message)
 
         # Get the server identity
         server_identity = await self.server_response_key.identity()
 
         # Use the request nonce or a bad one for testing
-        nonce = request.payload["access"]["nonce"]
         if bad_nonce:
             nonce = "0A0123456789"
 
         # Create the response
         response = ServerResponse(
             response=MockResponsePayload(
-                wasFoo=request.payload["request"]["foo"],
-                wasBar=request.payload["request"]["bar"],
+                wasFoo=request["foo"],
+                wasBar=request["bar"],
             ),
             server_identity=server_identity,
             nonce=nonce,

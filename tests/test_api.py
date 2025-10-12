@@ -278,13 +278,22 @@ class MockNetworkServer(INetwork):
 
         elif path == "/foo/bar":
             # Test endpoint for successful access
-            request, token = await self.access_verifier.verify(message)
+            request, token, nonce = await self.access_verifier.verify(message)
+
+            if nonce is None:
+                raise RuntimeError("null nonce")
 
             if request is None:
                 raise RuntimeError("null request")
 
             if token is None:
                 raise RuntimeError("null token")
+
+            if not nonce.startswith("0A"):
+                raise RuntimeError("unexpected nonce format")
+
+            if len(nonce) != 24:
+                raise RuntimeError("unexpected nonce length")
 
             if not token.identity.startswith("E"):
                 raise RuntimeError("unexpected identity format")
@@ -299,13 +308,22 @@ class MockNetworkServer(INetwork):
 
         elif path == "/bad/nonce":
             # Test endpoint for nonce mismatch detection
-            request, token = await self.access_verifier.verify(message)
+            request, token, nonce = await self.access_verifier.verify(message)
+
+            if nonce is None:
+                raise RuntimeError("null nonce")
 
             if request is None:
                 raise RuntimeError("null request")
 
             if token is None:
                 raise RuntimeError("null token")
+
+            if not nonce.startswith("0A"):
+                raise RuntimeError("unexpected nonce format")
+
+            if len(nonce) != 24:
+                raise RuntimeError("unexpected nonce length")
 
             if not token.identity.startswith("E"):
                 raise RuntimeError("unexpected identity format")

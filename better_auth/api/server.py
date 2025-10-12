@@ -839,7 +839,7 @@ class AccessVerifier:
         """
         self._config = config
 
-    async def verify(self, message: str) -> tuple[T, AccessToken[U]]:
+    async def verify(self, message: str) -> tuple[T, AccessToken[U], str]:
         """Verify an authenticated access request.
 
         This method performs comprehensive verification of an access request:
@@ -853,9 +853,10 @@ class AccessVerifier:
             message: Serialized AccessRequest from the client.
 
         Returns:
-            A tuple of (request, token) where:
+            A tuple of (request, token, nonce) where:
                 - request: The request payload of type T
                 - token: The verified AccessToken with attributes of type U
+                - nonce: The access nonce from the request
 
         Raises:
             InvalidMessageError: If the message is malformed.
@@ -870,4 +871,4 @@ class AccessVerifier:
             self._config.encoding.token_encoder,
             self._config.encoding.timestamper,
         )
-        return (request.payload["request"], token)
+        return (request.payload["request"], token, request.payload["access"]["nonce"])
