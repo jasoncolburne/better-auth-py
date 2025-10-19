@@ -12,6 +12,7 @@ from .paths import (
     AuthenticationPaths,
     DevicePaths,
     IAuthenticationPaths,
+    RecoveryPaths,
     SessionPaths,
 )
 from .storage import (
@@ -42,6 +43,7 @@ __all__ = [
     "AuthenticationPaths",
     "DevicePaths",
     "IAuthenticationPaths",
+    "RecoveryPaths",
     "SessionPaths",
     # storage
     "IClientRotatingKeyStore",

@@ -27,6 +27,7 @@ from better_auth.interfaces import (
     ITimestamper,
     IVerificationKeyStore,
     IVerifier,
+    RecoveryPaths,
     SessionPaths,
 )
 from better_auth.messages import ServerResponse
@@ -59,6 +60,9 @@ authentication_paths = AuthenticationPaths(
         rotate="/device/rotate",
         link="/device/link",
         unlink="/device/unlink",
+    ),
+    recovery=RecoveryPaths(
+        change="/recovery/change",
     ),
 )
 
@@ -274,6 +278,18 @@ async def test_recovers_from_loss(client_components):
     # Get the identity before we lose the device
     identity = await identity_store.get()
 
+    # Create new recovery key and change it while authenticated
+    new_recovery_signer = Secp256r1()
+    await new_recovery_signer.generate()
+    new_recovery_hash = await hasher.sum(await new_recovery_signer.public())
+
+    # Create next recovery key
+    next_recovery_signer = Secp256r1()
+    await next_recovery_signer.generate()
+    next_recovery_hash = await hasher.sum(await next_recovery_signer.public())
+
+    await client1.change_recovery_key(new_recovery_hash)
+
     await execute_flow(client1, verifier, verification_key_store)
 
     # Simulate device loss - create new client with only identity preserved
@@ -303,13 +319,8 @@ async def test_recovers_from_loss(client_components):
         )
     )
 
-    # Create next recovery key
-    next_recovery_signer = Secp256r1()
-    await next_recovery_signer.generate()
-    next_recovery_hash = await hasher.sum(await next_recovery_signer.public())
-
-    # Recover account with recovery key
-    await client2.recover_account(identity, recovery_signer, next_recovery_hash)
+    # Recover account with new recovery key (not the original one)
+    await client2.recover_account(identity, new_recovery_signer, next_recovery_hash)
     await execute_flow(client2, verifier, verification_key_store)
 
 

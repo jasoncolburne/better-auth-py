@@ -33,6 +33,10 @@ from better_auth.messages.session import (
     RequestSessionRequest,
     RequestSessionResponse,
 )
+from better_auth.messages.recovery import (
+    ChangeRecoveryKeyRequest,
+    ChangeRecoveryKeyResponse,
+)
 
 __all__ = [
     # Base classes
@@ -66,4 +70,7 @@ __all__ = [
     "CreateSessionResponse",
     "RefreshSessionRequest",
     "RefreshSessionResponse",
+    # Recovery
+    "ChangeRecoveryKeyRequest",
+    "ChangeRecoveryKeyResponse",
 ]

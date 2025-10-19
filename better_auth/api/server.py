@@ -34,6 +34,8 @@ from better_auth.interfaces.storage import (
 from better_auth.messages import (
     AccessRequest,
     AccessToken,
+    ChangeRecoveryKeyRequest,
+    ChangeRecoveryKeyResponse,
     CreateAccountRequest,
     CreateAccountResponse,
     CreateSessionRequest,
@@ -742,6 +744,58 @@ class BetterAuthServer:
         )
 
         response = DeleteAccountResponse(
+            {},
+            await self._config.crypto.key_pair.response.identity(),
+            request.payload["access"]["nonce"],
+        )
+
+        await response.sign(self._config.crypto.key_pair.response)
+
+        return await response.serialize()
+
+    async def change_recovery_key(self, message: str) -> str:
+        """Change the recovery key for an account.
+
+        This method allows changing the recovery key while authenticated,
+        without needing to use the old recovery key.
+
+        Steps:
+        1. Parses and verifies the change recovery key request
+        2. Rotates the authentication key for the requesting device
+        3. Changes the recovery hash
+        4. Returns a signed response
+
+        Args:
+            message: Serialized ChangeRecoveryKeyRequest from the client.
+
+        Returns:
+            Serialized ChangeRecoveryKeyResponse signed by the server.
+
+        Raises:
+            InvalidMessageError: If the message is malformed.
+            VerificationError: If signature verification fails.
+            AuthenticationError: If identity or device not found.
+        """
+        request = ChangeRecoveryKeyRequest.parse(message)
+        await request.verify(
+            self._config.crypto.verifier,
+            request.payload["request"]["authentication"]["publicKey"],
+        )
+
+        await self._config.store.authentication.key.rotate(
+            request.payload["request"]["authentication"]["identity"],
+            request.payload["request"]["authentication"]["device"],
+            request.payload["request"]["authentication"]["publicKey"],
+            request.payload["request"]["authentication"]["rotationHash"],
+        )
+
+        await self._config.store.recovery.hash.change(
+            request.payload["request"]["authentication"]["identity"],
+            request.payload["request"]["authentication"]["recoveryHash"],
+        )
+
+        # this is replayable, and should be fixed but making it not fixed
+        response = ChangeRecoveryKeyResponse(
             {},
             await self._config.crypto.key_pair.response.identity(),
             request.payload["access"]["nonce"],

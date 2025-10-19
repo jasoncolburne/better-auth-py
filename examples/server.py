@@ -200,6 +200,10 @@ class Server:
         """Handle device unlinking requests."""
         return await self._wrap_response(body, self.ba.unlink_device)
 
+    async def change_recovery(self, body: bytes) -> tuple[int, str]:
+        """Handle recovery key change requests."""
+        return await self._wrap_response(body, self.ba.change_recovery_key)
+
     async def request_session(self, body: bytes) -> tuple[int, str]:
         """Handle authentication start requests."""
         return await self._wrap_response(body, self.ba.request_session)
@@ -310,6 +314,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             "/device/rotate": self.server_instance.rotate_authentication,
             "/device/link": self.server_instance.link,
             "/device/unlink": self.server_instance.unlink,
+            "/recovery/change": self.server_instance.change_recovery,
             "/key/response": self.server_instance.response_key,
             "/foo/bar": self.server_instance.foo_bar,
             "/bad/nonce": self.server_instance.bad_nonce,
