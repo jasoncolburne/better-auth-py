@@ -240,6 +240,25 @@ class ServerRecoveryHashStore(IServerRecoveryHashStore):
 
         self._data_by_identity[identity] = new_hash
 
+    async def change(self, identity: str, key_hash: str) -> None:
+        """Change the recovery hash for an identity.
+
+        This is for forcefully changing the hash if the user loses access to the original.
+
+        Args:
+            identity: The identity to change the hash for.
+            key_hash: The new recovery key hash.
+
+        Raises:
+            RuntimeError: If identity not found.
+        """
+        stored = self._data_by_identity.get(identity)
+
+        if stored is None:
+            raise RuntimeError("not found")
+
+        self._data_by_identity[identity] = key_hash
+
 
 class ServerAuthenticationNonceStore(IServerAuthenticationNonceStore):
     """In-memory implementation of authentication nonce storage for servers.

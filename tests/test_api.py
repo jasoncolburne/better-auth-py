@@ -56,6 +56,7 @@ from better_auth.interfaces import (
     INetwork,
     ISigningKey,
     IVerifier,
+    RecoveryPaths,
     SessionPaths,
 )
 from better_auth.messages import AccessRequest, ServerResponse
@@ -94,6 +95,9 @@ AUTHENTICATION_PATHS = {
         "rotate": "/device/rotate",
         "link": "/device/link",
         "unlink": "/device/unlink",
+    },
+    "recovery": {
+        "change": "/recovery/change",
     },
 }
 
@@ -275,6 +279,9 @@ class MockNetworkServer(INetwork):
 
         elif path == self.paths["session"]["refresh"]:
             return await self.better_auth_server.refresh_session(message)
+
+        elif path == self.paths["recovery"]["change"]:
+            return await self.better_auth_server.change_recovery_key(message)
 
         elif path == "/foo/bar":
             # Test endpoint for successful access
@@ -693,6 +700,7 @@ async def better_auth_client(
             account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
             session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
             device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
+            recovery=RecoveryPaths(**AUTHENTICATION_PATHS["recovery"]),
         ),
         store=ClientStoreConfig(
             identifier=IdentifierStoreConfig(
@@ -782,6 +790,7 @@ async def test_recovers_from_loss(
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
                 device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
+                recovery=RecoveryPaths(**AUTHENTICATION_PATHS["recovery"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(
@@ -819,6 +828,7 @@ async def test_recovers_from_loss(
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
                 device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
+                recovery=RecoveryPaths(**AUTHENTICATION_PATHS["recovery"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(
@@ -841,13 +851,18 @@ async def test_recovers_from_loss(
     await better_auth_client.create_account(recovery_hash)
     identity = await better_auth_client.identity()
 
+    new_recovery_signer = Secp256r1()
     next_recovery_signer = Secp256r1()
+    await new_recovery_signer.generate()
     await next_recovery_signer.generate()
+    new_recovery_hash = await hasher.sum(await new_recovery_signer.public())
     next_recovery_hash = await hasher.sum(await next_recovery_signer.public())
+
+    await better_auth_client.change_recovery_key(new_recovery_hash)
 
     # Recover account on new device
     await recovered_better_auth_client.recover_account(
-        identity, crypto_keys["recovery_signer"], next_recovery_hash
+        identity, new_recovery_signer, next_recovery_hash
     )
 
     # Test full flow on recovered device
@@ -901,6 +916,7 @@ async def test_links_another_device(
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
                 device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
+                recovery=RecoveryPaths(**AUTHENTICATION_PATHS["recovery"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(
@@ -938,6 +954,7 @@ async def test_links_another_device(
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
                 device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
+                recovery=RecoveryPaths(**AUTHENTICATION_PATHS["recovery"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(
@@ -1037,6 +1054,7 @@ async def test_rejects_expired_authentication_challenges(
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
                 device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
+                recovery=RecoveryPaths(**AUTHENTICATION_PATHS["recovery"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(
@@ -1126,6 +1144,7 @@ async def test_rejects_expired_refresh_tokens(
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
                 device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
+                recovery=RecoveryPaths(**AUTHENTICATION_PATHS["recovery"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(
@@ -1215,6 +1234,7 @@ async def test_rejects_expired_access_tokens(
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
                 device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
+                recovery=RecoveryPaths(**AUTHENTICATION_PATHS["recovery"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(
@@ -1285,6 +1305,7 @@ async def test_detects_tampered_access_tokens(
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
                 device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
+                recovery=RecoveryPaths(**AUTHENTICATION_PATHS["recovery"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(
@@ -1366,6 +1387,7 @@ async def test_detects_mismatched_access_nonce(
                 account=AccountPaths(**AUTHENTICATION_PATHS["account"]),
                 session=SessionPaths(**AUTHENTICATION_PATHS["session"]),
                 device=DevicePaths(**AUTHENTICATION_PATHS["device"]),
+                recovery=RecoveryPaths(**AUTHENTICATION_PATHS["recovery"]),
             ),
             store=ClientStoreConfig(
                 identifier=IdentifierStoreConfig(

@@ -240,6 +240,20 @@ class IServerRecoveryHashStore(Protocol):
         """
         ...
 
+    async def change(self, identity: str, key_hash: str) -> None:
+        """Change the recovery hash for an identity.
+
+        This is for forcefully changing the hash if the user loses access to the original.
+
+        Args:
+            identity: The identity to change the hash for.
+            key_hash: The new recovery key hash.
+
+        Raises:
+            Exception: If identity is not found.
+        """
+        ...
+
 
 class IServerTimeLockStore(Protocol):
     """Interface for server-side time-lock storage."""

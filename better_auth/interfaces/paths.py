@@ -33,6 +33,12 @@ class DevicePathsDict(TypedDict):
     unlink: str
 
 
+class RecoveryPathsDict(TypedDict):
+    """Recovery endpoint paths."""
+
+    change: str
+
+
 class IAuthenticationPaths(Protocol):
     """Interface for authentication path configuration."""
 
@@ -60,6 +66,15 @@ class IAuthenticationPaths(Protocol):
 
         Returns:
             Dictionary containing 'rotate', 'link', and 'unlink' paths.
+        """
+        ...
+
+    @property
+    def recovery(self) -> RecoveryPathsDict:
+        """Recovery endpoint paths.
+
+        Returns:
+            Dictionary containing 'change' path.
         """
         ...
 
@@ -110,6 +125,17 @@ class DevicePaths:
 
 
 @dataclass
+class RecoveryPaths:
+    """Recovery endpoint paths.
+
+    Attributes:
+        change: Path for recovery key change.
+    """
+
+    change: str
+
+
+@dataclass
 class AuthenticationPaths:
     """Concrete implementation of authentication path configuration.
 
@@ -117,8 +143,10 @@ class AuthenticationPaths:
         account: Account endpoint paths.
         session: Session endpoint paths.
         device: Device endpoint paths.
+        recovery: Recovery endpoint paths.
     """
 
     account: AccountPaths
     session: SessionPaths
     device: DevicePaths
+    recovery: RecoveryPaths

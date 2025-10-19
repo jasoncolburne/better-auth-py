@@ -24,6 +24,8 @@ from better_auth.interfaces import (
 )
 from better_auth.messages import (
     AccessRequest,
+    ChangeRecoveryKeyRequest,
+    ChangeRecoveryKeyResponse,
     CreateAccountRequest,
     CreateAccountResponse,
     CreateSessionRequest,
@@ -628,6 +630,60 @@ class BetterAuthClient:
         reply = await self.args.io.network.send_request(self.args.paths.device.rotate, message)
 
         response = RotateDeviceResponse.parse(reply)
+        await self._verify_response(response, response.payload["access"]["serverIdentity"])
+
+        # Verify nonce matches
+        if response.payload["access"]["nonce"] != nonce:
+            raise AuthenticationError("incorrect nonce")
+
+        await self.args.store.key.authentication.rotate()
+
+    async def change_recovery_key(self, recovery_hash: str) -> None:
+        """Change the recovery key for this account.
+
+        This method changes the recovery key hash while authenticated. This allows
+        users to change their recovery key without needing to use the old one.
+
+        Args:
+            recovery_hash: The new recovery key hash.
+
+        Steps:
+        1. Generate new authentication key and rotation hash
+        2. Create and sign recovery key change request
+        3. Send to server
+        4. Verify response
+        5. Rotate authentication key
+
+        Raises:
+            VerificationError: If response verification fails.
+            AuthenticationError: If nonce mismatch occurs.
+            StorageError: If storage operations fail.
+            NetworkError: If network communication fails.
+        """
+        signing_key, rotation_hash = await self.args.store.key.authentication.next()
+        nonce = await self.args.crypto.noncer.generate128()
+
+        # Create and sign the request
+        request = ChangeRecoveryKeyRequest(
+            {
+                "authentication": {
+                    "device": await self.args.store.identifier.device.get(),
+                    "identity": await self.args.store.identifier.identity.get(),
+                    "publicKey": await signing_key.public(),
+                    "recoveryHash": recovery_hash,
+                    "rotationHash": rotation_hash,
+                }
+            },
+            nonce,
+        )
+
+        await request.sign(signing_key)
+        message = await request.serialize()
+
+        # Send request and parse response
+        reply = await self.args.io.network.send_request(self.args.paths.recovery.change, message)
+
+        response = ChangeRecoveryKeyResponse.parse(reply)
         await self._verify_response(response, response.payload["access"]["serverIdentity"])
 
         # Verify nonce matches
