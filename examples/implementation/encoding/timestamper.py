@@ -56,7 +56,7 @@ class Rfc3339Nano(ITimestamper):
 
         # Truncate microseconds (6 digits) to milliseconds (3 digits)
         # Match pattern: .XXXXXX where X are digits, keep only first 3
-        iso_string = re.sub(r"\.(\d{3})\d{3}Z", r".\1Z", iso_string)
+        iso_string = re.sub(r"\.(\d{3})\d+Z", r".\1Z", iso_string)
 
         return iso_string
 
