@@ -585,10 +585,9 @@ class BetterAuthServer:
             token_string,
             self._config.encoding.token_encoder,
         )
-        await token.verify_token(
+        await token.verify_signature(
             self._config.crypto.verifier,
             await self._config.crypto.key_pair.access.public(),
-            self._config.encoding.timestamper,
         )
 
         hash_value = await self._config.crypto.hasher.sum(

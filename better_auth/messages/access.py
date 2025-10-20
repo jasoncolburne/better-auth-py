@@ -167,10 +167,22 @@ class AccessToken(SignableMessage, Generic[T]):
         token = await token_encoder.encode(self.compose_payload())
         return self.signature + token
 
-    async def verify_token(
+    async def verify_signature(self, verifier: IVerifier, public_key: str) -> None:
+        """Verify the token signature.
+
+        Args:
+            verifier: Verifier for signature verification.
+            public_key: Public key to verify against.
+
+        Raises:
+            RuntimeError: If signature verification fails.
+        """
+        await self.verify(verifier, public_key)
+
+    async def verify_token_for_access(
         self, verifier: IVerifier, public_key: str, timestamper: ITimestamper
     ) -> None:
-        """Verify the token signature and validity period.
+        """Verify the token signature and validity period for access requests.
 
         Checks:
         1. Cryptographic signature is valid
@@ -186,7 +198,7 @@ class AccessToken(SignableMessage, Generic[T]):
             RuntimeError: If signature verification fails.
             Exception: If token is from the future or has expired.
         """
-        await self.verify(verifier, public_key)
+        await self.verify_signature(verifier, public_key)
 
         now = timestamper.now()
         issued_at = timestamper.parse(self.issued_at)
@@ -281,7 +293,7 @@ class AccessRequest(SignableMessage, Generic[T]):
         verification_key = await access_key_store.get(access_token.server_identity)
 
         # Verify token signature and validity
-        await access_token.verify_token(
+        await access_token.verify_token_for_access(
             verification_key.verifier(), await verification_key.public(), timestamper
         )
 
