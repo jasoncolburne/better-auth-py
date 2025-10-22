@@ -448,6 +448,12 @@ async def create_server(
         expiry["authentication_challenge_lifetime_in_seconds"]
     )
 
+    access_verification_key_store = VerificationKeyStore()
+    access_verification_key_store.add(
+        await keys["access_signer"].identity(),
+        keys["access_signer"],
+    )
+
     config = BetterAuthServerConfig(
         crypto=ServerCryptoConfig(
             hasher=hasher,
@@ -468,6 +474,7 @@ async def create_server(
         ),
         store=ServerStoreConfig(
             access=AccessStoreConfig(
+                verification_key=access_verification_key_store,
                 key_hash=access_key_hash_store,
             ),
             authentication=AuthenticationStoreConfig(

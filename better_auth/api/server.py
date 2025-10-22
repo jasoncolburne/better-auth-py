@@ -123,9 +123,11 @@ class AccessStoreConfig:
     """Configuration for access-related storage.
 
     Attributes:
+        verification_key: Store for access verification keys.
         key_hash: Time-locked store for access key hashes.
     """
 
+    verification_key: IVerificationKeyStore
     key_hash: IServerTimeLockStore
 
 
@@ -585,9 +587,13 @@ class BetterAuthServer:
             token_string,
             self._config.encoding.token_encoder,
         )
+
+        access_verification_key = await self._config.store.access.verification_key.get(
+            token.server_identity
+        )
         await token.verify_signature(
             self._config.crypto.verifier,
-            await self._config.crypto.key_pair.access.public(),
+            await access_verification_key.public(),
         )
 
         hash_value = await self._config.crypto.hasher.sum(
