@@ -95,6 +95,9 @@ class Server:
         # Initialize the keys synchronously (we'll handle this in start_server)
         self._keys_initialized = False
 
+        # Create access key store
+        self.access_key_store = VerificationKeyStore()
+
         # Create BetterAuthServer config
         self.server_config = BetterAuthServerConfig(
             crypto=CryptoConfig(
@@ -116,6 +119,7 @@ class Server:
             ),
             store=StoreConfig(
                 access=AccessStoreConfig(
+                    verification_key=self.access_key_store,
                     key_hash=access_key_hash_store,
                 ),
                 authentication=AuthenticationStoreConfig(
@@ -129,9 +133,6 @@ class Server:
         )
 
         self.ba = BetterAuthServer(self.server_config)
-
-        # Create access key store
-        self.access_key_store = VerificationKeyStore()
 
         # Create AccessVerifier
         self.av = AccessVerifier(
