@@ -214,6 +214,18 @@ class IServerAuthenticationKeyStore(Protocol):
         """
         ...
 
+    async def ensure_active(self, identity: str, device: str) -> None:
+        """Ensure a device is active (not revoked and identity not deleted).
+
+        Args:
+            identity: The identity to check.
+            device: The device identifier to check.
+
+        Raises:
+            Exception: If identity is deleted or device is revoked.
+        """
+        ...
+
 
 class IServerRecoveryHashStore(Protocol):
     """Interface for server-side recovery hash storage."""

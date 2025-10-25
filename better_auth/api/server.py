@@ -602,6 +602,8 @@ class BetterAuthServer:
         if hash_value != token.rotation_hash:
             raise AuthenticationError("hash mismatch")
 
+        await self._config.store.authentication.key.ensure_active(token.identity, token.device)
+
         now = self._config.encoding.timestamper.now()
         refresh_expiry = self._config.encoding.timestamper.parse(token.refresh_expiry)
 

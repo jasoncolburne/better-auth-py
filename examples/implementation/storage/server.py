@@ -187,6 +187,23 @@ class ServerAuthenticationKeyStore(IServerAuthenticationKeyStore):
         # Remove the identity itself
         self._identities.remove(identity)
 
+    async def ensure_active(self, identity: str, device: str) -> None:
+        """Ensure a device is active (not revoked and identity not deleted).
+
+        Args:
+            identity: The identity to check.
+            device: The device identifier to check.
+
+        Raises:
+            RuntimeError: If identity is deleted or device is revoked.
+        """
+        if identity not in self._identities:
+            raise RuntimeError("not found")
+
+        token = identity + device
+        if token not in self._data_by_token:
+            raise RuntimeError("not found")
+
 
 class ServerRecoveryHashStore(IServerRecoveryHashStore):
     """In-memory implementation of recovery hash storage for servers.
