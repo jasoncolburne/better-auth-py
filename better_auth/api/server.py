@@ -12,7 +12,10 @@ from datetime import timedelta
 from typing import TypeVar
 
 from better_auth.exceptions import (
-    AuthenticationError,
+    ExpiredTokenError,
+    InvalidDeviceError,
+    InvalidHashError,
+    MismatchedIdentitiesError,
 )
 from better_auth.interfaces.crypto import (
     IHasher,
@@ -256,7 +259,7 @@ class BetterAuthServer:
         )
 
         if device != request.payload["request"]["authentication"]["device"]:
-            raise AuthenticationError("bad device derivation")
+            raise InvalidDeviceError(request.payload["request"]["authentication"]["device"], device)
 
         await self._config.store.recovery.hash.register(
             identity, request.payload["request"]["authentication"]["recoveryHash"]
@@ -322,7 +325,10 @@ class BetterAuthServer:
             link_container.payload["authentication"]["identity"]
             != request.payload["request"]["authentication"]["identity"]
         ):
-            raise AuthenticationError("mismatched identities")
+            raise MismatchedIdentitiesError(
+                link_container.payload["authentication"]["identity"],
+                request.payload["request"]["authentication"]["identity"],
+            )
 
         device = await self._config.crypto.hasher.sum(
             link_container.payload["authentication"]["publicKey"]
@@ -330,7 +336,7 @@ class BetterAuthServer:
         )
 
         if device != link_container.payload["authentication"]["device"]:
-            raise AuthenticationError("bad device derivation")
+            raise InvalidDeviceError(link_container.payload["authentication"]["device"], device)
 
         await self._config.store.authentication.key.rotate(
             request.payload["request"]["authentication"]["identity"],
@@ -600,7 +606,7 @@ class BetterAuthServer:
             request.payload["request"]["access"]["publicKey"]
         )
         if hash_value != token.rotation_hash:
-            raise AuthenticationError("hash mismatch")
+            raise InvalidHashError(token.rotation_hash, hash_value, "rotation")
 
         await self._config.store.authentication.key.ensure_active(token.identity, token.device)
 
@@ -608,7 +614,9 @@ class BetterAuthServer:
         refresh_expiry = self._config.encoding.timestamper.parse(token.refresh_expiry)
 
         if now > refresh_expiry:
-            raise AuthenticationError("refresh has expired")
+            raise ExpiredTokenError(
+                token.refresh_expiry, self._config.encoding.timestamper.format(now), "refresh"
+            )
 
         await self._config.store.access.key_hash.reserve(hash_value)
 
@@ -680,7 +688,7 @@ class BetterAuthServer:
         )
 
         if device != request.payload["request"]["authentication"]["device"]:
-            raise AuthenticationError("bad device derivation")
+            raise InvalidDeviceError(request.payload["request"]["authentication"]["device"], device)
 
         hash_value = await self._config.crypto.hasher.sum(
             request.payload["request"]["authentication"]["recoveryKey"]

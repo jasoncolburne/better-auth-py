@@ -10,6 +10,7 @@ import json
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
+from better_auth.exceptions import InvalidMessageError
 from better_auth.interfaces.crypto import ISigningKey, IVerifier
 
 
@@ -57,10 +58,10 @@ class SignableMessage(SerializableMessage):
             The JSON-serialized payload.
 
         Raises:
-            RuntimeError: If payload is not defined.
+            InvalidMessageError: If payload is not defined.
         """
         if self.payload is None:
-            raise RuntimeError("payload not defined")
+            raise InvalidMessageError("payload", "payload is undefined")
 
         return json.dumps(self.payload, separators=(",", ":"), sort_keys=False)
 
@@ -71,10 +72,10 @@ class SignableMessage(SerializableMessage):
             The serialized message as a JSON string with payload and signature.
 
         Raises:
-            RuntimeError: If signature is None.
+            InvalidMessageError: If signature is None.
         """
         if self.signature is None:
-            raise RuntimeError("null signature")
+            raise InvalidMessageError("signature", "signature is null or undefined")
 
         # Manually construct JSON to maintain exact serialization order
         # Format: {"payload":<payload>,"signature":"<signature>"}
@@ -88,7 +89,7 @@ class SignableMessage(SerializableMessage):
             signer: The signing key to use for signing.
 
         Raises:
-            RuntimeError: If payload is not defined.
+            InvalidMessageError: If payload is not defined.
         """
         self.signature = await signer.sign(self.compose_payload())
 
@@ -100,10 +101,10 @@ class SignableMessage(SerializableMessage):
             public_key: The public key to verify against.
 
         Raises:
-            RuntimeError: If signature is None.
-            Exception: If verification fails.
+            InvalidMessageError: If signature is None.
+            SignatureVerificationError: If verification fails.
         """
         if self.signature is None:
-            raise RuntimeError("null signature")
+            raise InvalidMessageError("signature", "signature is null or undefined")
 
         await verifier.verify(self.compose_payload(), self.signature, public_key)

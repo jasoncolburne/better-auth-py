@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from better_auth.exceptions import AuthenticationError
+from better_auth.exceptions import IncorrectNonceError
 from better_auth.interfaces import (
     IAuthenticationPaths,
     IClientRotatingKeyStore,
@@ -324,7 +324,7 @@ class BetterAuthClient:
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
-            raise AuthenticationError("incorrect nonce")
+            raise IncorrectNonceError(nonce, response.payload["access"]["nonce"])
 
         # Store identity and device
         await self.args.store.identifier.identity.store(identity)
@@ -387,7 +387,7 @@ class BetterAuthClient:
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
-            raise AuthenticationError("incorrect nonce")
+            raise IncorrectNonceError(nonce, response.payload["access"]["nonce"])
 
         # Store identity and device
         await self.args.store.identifier.identity.store(identity)
@@ -497,7 +497,7 @@ class BetterAuthClient:
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
-            raise AuthenticationError("incorrect nonce")
+            raise IncorrectNonceError(nonce, response.payload["access"]["nonce"])
 
         await self.args.store.key.authentication.rotate()
 
@@ -536,7 +536,7 @@ class BetterAuthClient:
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
-            raise AuthenticationError("incorrect nonce")
+            raise IncorrectNonceError(nonce, response.payload["access"]["nonce"])
 
         await self.args.store.key.authentication.rotate()
 
@@ -584,7 +584,7 @@ class BetterAuthClient:
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
-            raise AuthenticationError("incorrect nonce")
+            raise IncorrectNonceError(nonce, response.payload["access"]["nonce"])
 
         await self.args.store.key.authentication.rotate()
 
@@ -634,7 +634,7 @@ class BetterAuthClient:
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
-            raise AuthenticationError("incorrect nonce")
+            raise IncorrectNonceError(nonce, response.payload["access"]["nonce"])
 
         await self.args.store.key.authentication.rotate()
 
@@ -688,7 +688,7 @@ class BetterAuthClient:
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
-            raise AuthenticationError("incorrect nonce")
+            raise IncorrectNonceError(nonce, response.payload["access"]["nonce"])
 
         await self.args.store.key.authentication.rotate()
 
@@ -737,7 +737,7 @@ class BetterAuthClient:
 
         # Verify start nonce matches
         if start_response.payload["access"]["nonce"] != start_nonce:
-            raise AuthenticationError("incorrect nonce")
+            raise IncorrectNonceError(start_nonce, start_response.payload["access"]["nonce"])
 
         # Phase 2: Finish authentication
         # Initialize access keys
@@ -772,7 +772,7 @@ class BetterAuthClient:
 
         # Verify finish nonce matches
         if finish_response.payload["access"]["nonce"] != finish_nonce:
-            raise AuthenticationError("incorrect nonce")
+            raise IncorrectNonceError(finish_nonce, finish_response.payload["access"]["nonce"])
 
         # Store the access token
         await self.args.store.token.access.store(
@@ -826,7 +826,7 @@ class BetterAuthClient:
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != nonce:
-            raise AuthenticationError("incorrect nonce")
+            raise IncorrectNonceError(nonce, response.payload["access"]["nonce"])
 
         # Store new access token
         await self.args.store.token.access.store(response.payload["response"]["access"]["token"])
@@ -890,6 +890,8 @@ class BetterAuthClient:
 
         # Verify nonce matches
         if response.payload["access"]["nonce"] != access_request.payload["access"]["nonce"]:
-            raise AuthenticationError("incorrect nonce")
+            raise IncorrectNonceError(
+                access_request.payload["access"]["nonce"], response.payload["access"]["nonce"]
+            )
 
         return reply

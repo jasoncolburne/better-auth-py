@@ -10,6 +10,13 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, Generic, TypeVar
 
+from better_auth.exceptions import (
+    ExpiredTokenError,
+    FutureRequestError,
+    FutureTokenError,
+    InvalidMessageError,
+    StaleRequestError,
+)
 from better_auth.interfaces.crypto import IVerifier
 from better_auth.interfaces.encoding import ITimestamper, ITokenEncoder
 from better_auth.interfaces.storage import IServerTimeLockStore, IVerificationKeyStore
@@ -159,10 +166,10 @@ class AccessToken(SignableMessage, Generic[T]):
             The serialized token string.
 
         Raises:
-            RuntimeError: If signature is missing.
+            InvalidMessageError: If signature is missing.
         """
         if self.signature is None:
-            raise RuntimeError("missing signature")
+            raise InvalidMessageError("signature", "signature is missing")
 
         token = await token_encoder.encode(self.compose_payload())
         return self.signature + token
@@ -195,8 +202,9 @@ class AccessToken(SignableMessage, Generic[T]):
             timestamper: Timestamper for time validation.
 
         Raises:
-            RuntimeError: If signature verification fails.
-            Exception: If token is from the future or has expired.
+            SignatureVerificationError: If signature verification fails.
+            FutureTokenError: If token is from the future.
+            ExpiredTokenError: If token has expired.
         """
         await self.verify_signature(verifier, public_key)
 
@@ -205,10 +213,11 @@ class AccessToken(SignableMessage, Generic[T]):
         expiry = timestamper.parse(self.expiry)
 
         if now < issued_at:
-            raise Exception("token from future")
+            time_diff = issued_at.timestamp() - now.timestamp()
+            raise FutureTokenError(self.issued_at, timestamper.format(now), time_diff)
 
         if now > expiry:
-            raise Exception("token expired")
+            raise ExpiredTokenError(self.expiry, timestamper.format(now), "access")
 
 
 class AccessRequest(SignableMessage, Generic[T]):
@@ -282,9 +291,10 @@ class AccessRequest(SignableMessage, Generic[T]):
             The verified AccessToken.
 
         Raises:
-            Exception: If verification fails at any stage.
-            Exception: If request is stale or from the future.
-            Exception: If nonce has already been used.
+            SignatureVerificationError: If verification fails at any stage.
+            StaleRequestError: If request is too old.
+            FutureRequestError: If request timestamp is in the future.
+            NonceReplayError: If nonce has already been used.
         """
         # Parse and verify the access token
         access_token = await AccessToken.parse(self.payload["access"]["token"], token_encoder)
@@ -311,10 +321,17 @@ class AccessRequest(SignableMessage, Generic[T]):
         )
 
         if now > expiry:
-            raise Exception("stale request")
+            raise StaleRequestError(
+                self.payload["access"]["timestamp"],
+                timestamper.format(now),
+                nonce_store.lifetime_in_seconds,
+            )
 
         if now < access_time:
-            raise Exception("request from future")
+            time_diff = access_time.timestamp() - now.timestamp()
+            raise FutureRequestError(
+                self.payload["access"]["timestamp"], timestamper.format(now), time_diff
+            )
 
         # Reserve nonce to prevent replay
         await nonce_store.reserve(self.payload["access"]["nonce"])
