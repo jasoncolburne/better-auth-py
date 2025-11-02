@@ -28,7 +28,7 @@ from better_auth.api.server import (
 )
 from better_auth.messages import ServerResponse
 from .implementation.crypto import Hasher, Noncer, Secp256r1, Secp256r1Verifier
-from .implementation.encoding import IdentityVerifier, Rfc3339Nano, TokenEncoder
+from .implementation.encoding import IdentityVerifier, Rfc3339, TokenEncoder
 from .implementation.storage import (
     ServerAuthenticationKeyStore,
     ServerAuthenticationNonceStore,
@@ -85,7 +85,7 @@ class Server:
 
         # Encoding components
         identity_verifier = IdentityVerifier()
-        timestamper = Rfc3339Nano()
+        timestamper = Rfc3339()
         token_encoder = TokenEncoder()
 
         # Generate server keys

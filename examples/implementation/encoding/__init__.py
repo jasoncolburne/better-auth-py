@@ -7,12 +7,12 @@ token compression/encoding, and identity verification.
 
 from .base64 import Base64
 from .identity import IdentityVerifier
-from .timestamper import Rfc3339Nano
+from .timestamper import Rfc3339
 from .token_encoder import TokenEncoder
 
 __all__ = [
     "Base64",
     "IdentityVerifier",
-    "Rfc3339Nano",
+    "Rfc3339",
     "TokenEncoder",
 ]

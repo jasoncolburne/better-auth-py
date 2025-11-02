@@ -39,7 +39,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "examples"))
 
 from implementation.crypto import Hasher, Noncer, Secp256r1, Secp256r1Verifier
-from implementation.encoding import Rfc3339Nano
+from implementation.encoding import Rfc3339
 from implementation.storage import ClientRotatingKeyStore, ClientValueStore, VerificationKeyStore
 
 DEBUG_LOGGING = False
@@ -143,7 +143,7 @@ async def client_components():
     hasher = Hasher()
     noncer = Noncer()
     verifier = Secp256r1Verifier()
-    timestamper = Rfc3339Nano()
+    timestamper = Rfc3339()
     network = Network()
 
     # Fetch server's response public key

@@ -67,7 +67,7 @@ from better_auth.messages import AccessRequest, ServerResponse
 from examples.implementation.crypto import Hasher, Noncer, Secp256r1, Secp256r1Verifier
 from examples.implementation.encoding import (
     IdentityVerifier,
-    Rfc3339Nano,
+    Rfc3339,
     TokenEncoder,
 )
 from examples.implementation.storage import (
@@ -469,7 +469,7 @@ async def create_server(
         ),
         encoding=ServerEncodingConfig(
             identity_verifier=IdentityVerifier(),
-            timestamper=Rfc3339Nano(),
+            timestamper=Rfc3339(),
             token_encoder=TokenEncoder(),
         ),
         expiry=ExpiryConfig(
@@ -525,7 +525,7 @@ async def create_verifier(
         ),
         encoding=AccessVerifierEncodingConfig(
             token_encoder=TokenEncoder(),
-            timestamper=Rfc3339Nano(),
+            timestamper=Rfc3339(),
         ),
         store=AccessVerifierStorageConfig(
             access=AccessVerifierStoreConfig(
@@ -702,7 +702,7 @@ async def better_auth_client(
             ),
         ),
         encoding=ClientEncodingConfig(
-            timestamper=Rfc3339Nano(),
+            timestamper=Rfc3339(),
         ),
         io=IOConfig(
             network=mock_network_server,
@@ -792,7 +792,7 @@ async def test_recovers_from_loss(
                 ),
             ),
             encoding=ClientEncodingConfig(
-                timestamper=Rfc3339Nano(),
+                timestamper=Rfc3339(),
             ),
             io=IOConfig(
                 network=mock_network_server,
@@ -830,7 +830,7 @@ async def test_recovers_from_loss(
                 ),
             ),
             encoding=ClientEncodingConfig(
-                timestamper=Rfc3339Nano(),
+                timestamper=Rfc3339(),
             ),
             io=IOConfig(
                 network=mock_network_server,
@@ -918,7 +918,7 @@ async def test_links_another_device(
                 ),
             ),
             encoding=ClientEncodingConfig(
-                timestamper=Rfc3339Nano(),
+                timestamper=Rfc3339(),
             ),
             io=IOConfig(
                 network=mock_network_server,
@@ -956,7 +956,7 @@ async def test_links_another_device(
                 ),
             ),
             encoding=ClientEncodingConfig(
-                timestamper=Rfc3339Nano(),
+                timestamper=Rfc3339(),
             ),
             io=IOConfig(
                 network=mock_network_server,
@@ -1056,7 +1056,7 @@ async def test_rejects_expired_authentication_challenges(
                 ),
             ),
             encoding=ClientEncodingConfig(
-                timestamper=Rfc3339Nano(),
+                timestamper=Rfc3339(),
             ),
             io=IOConfig(
                 network=mock_network_server,
@@ -1146,7 +1146,7 @@ async def test_rejects_expired_refresh_tokens(
                 ),
             ),
             encoding=ClientEncodingConfig(
-                timestamper=Rfc3339Nano(),
+                timestamper=Rfc3339(),
             ),
             io=IOConfig(
                 network=mock_network_server,
@@ -1234,7 +1234,7 @@ async def test_rejects_expired_access_tokens(
                 ),
             ),
             encoding=ClientEncodingConfig(
-                timestamper=Rfc3339Nano(),
+                timestamper=Rfc3339(),
             ),
             io=IOConfig(
                 network=mock_network_server,
@@ -1303,7 +1303,7 @@ async def test_detects_tampered_access_tokens(
                 ),
             ),
             encoding=ClientEncodingConfig(
-                timestamper=Rfc3339Nano(),
+                timestamper=Rfc3339(),
             ),
             io=IOConfig(
                 network=mock_network_server,
@@ -1385,7 +1385,7 @@ async def test_detects_mismatched_access_nonce(
                 ),
             ),
             encoding=ClientEncodingConfig(
-                timestamper=Rfc3339Nano(),
+                timestamper=Rfc3339(),
             ),
             io=IOConfig(
                 network=mock_network_server,
