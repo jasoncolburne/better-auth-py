@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from better_auth.interfaces.encoding import ITimestamper
 
 
-class Rfc3339Nano(ITimestamper):
+class Rfc3339(ITimestamper):
     """RFC3339 timestamp formatter with millisecond precision.
 
     This class formats datetime objects to RFC3339 strings with millisecond
@@ -32,7 +32,7 @@ class Rfc3339Nano(ITimestamper):
         Example:
             >>> from datetime import datetime, timezone
             >>> dt = datetime(2025, 1, 1, 12, 0, 0, 123456, tzinfo=timezone.utc)
-            >>> Rfc3339Nano().format(dt)
+            >>> Rfc3339().format(dt)
             '2025-01-01T12:00:00.123Z'
         """
         # Convert to UTC if timezone-aware
@@ -73,7 +73,7 @@ class Rfc3339Nano(ITimestamper):
             The parsed datetime object.
 
         Example:
-            >>> Rfc3339Nano().parse('2025-01-01T12:00:00.123Z')
+            >>> Rfc3339().parse('2025-01-01T12:00:00.123Z')
             datetime.datetime(2025, 1, 1, 12, 0, 0, 123000, tzinfo=datetime.timezone.utc)
         """
         if isinstance(when, datetime):
@@ -96,7 +96,7 @@ class Rfc3339Nano(ITimestamper):
             The current datetime with UTC timezone.
 
         Example:
-            >>> now = Rfc3339Nano().now()
+            >>> now = Rfc3339().now()
             >>> now.tzinfo == timezone.utc
             True
         """
