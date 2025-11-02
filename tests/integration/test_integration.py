@@ -454,9 +454,9 @@ async def test_detects_mismatched_access_nonce(client_components):
 
     await client.create_account(recovery_hash)
 
-    with pytest.raises(Exception) as exc_info:
+    from better_auth.exceptions import IncorrectNonceError
+
+    with pytest.raises(IncorrectNonceError):
         await client.create_session()
         message = {"foo": "bar", "bar": "foo"}
         await client.make_access_request("/bad/nonce", message)
-
-    assert "incorrect nonce" in str(exc_info.value)

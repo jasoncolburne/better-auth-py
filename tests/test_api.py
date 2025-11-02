@@ -17,6 +17,10 @@ from typing import Any, TypeVar
 
 import pytest
 
+from better_auth.exceptions import (
+    ExpiredTokenError,
+    IncorrectNonceError,
+)
 from better_auth.api import (
     AccessVerifier,
     AccessVerifierConfig,
@@ -1172,10 +1176,8 @@ async def test_rejects_expired_refresh_tokens(
     recovery_hash = await hasher.sum(await crypto_keys["recovery_signer"].public())
     await better_auth_client.create_account(recovery_hash)
 
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(ExpiredTokenError):
         await execute_flow(better_auth_client, ecc_verifier, crypto_keys)
-
-    assert "refresh has expired" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
@@ -1262,10 +1264,8 @@ async def test_rejects_expired_access_tokens(
     recovery_hash = await hasher.sum(await crypto_keys["recovery_signer"].public())
     await better_auth_client.create_account(recovery_hash)
 
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(ExpiredTokenError):
         await execute_flow(better_auth_client, ecc_verifier, crypto_keys)
-
-    assert "token expired" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
@@ -1415,11 +1415,9 @@ async def test_detects_mismatched_access_nonce(
     recovery_hash = await hasher.sum(await crypto_keys["recovery_signer"].public())
     await better_auth_client.create_account(recovery_hash)
 
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(IncorrectNonceError):
         await better_auth_client.create_session()
 
         # Make request to endpoint that returns wrong nonce
         message = {"foo": "bar", "bar": "foo"}
         await better_auth_client.make_access_request("/bad/nonce", message)
-
-    assert "incorrect nonce" in str(exc_info.value)

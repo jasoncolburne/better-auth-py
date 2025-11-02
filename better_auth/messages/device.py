@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from typing import Any, Dict
 
+from better_auth.exceptions import InvalidMessageError
 from better_auth.messages.message import SignableMessage
 from better_auth.messages.request import ClientRequest
 from better_auth.messages.response import ServerResponse
@@ -54,10 +55,10 @@ class LinkContainer(SignableMessage):
             The JSON-serialized payload.
 
         Raises:
-            RuntimeError: If payload is not defined.
+            InvalidMessageError: If payload is not defined.
         """
         if self.payload is None:
-            raise RuntimeError("payload not defined")
+            raise InvalidMessageError("payload", "payload is undefined")
 
         return json.dumps(self.payload, separators=(",", ":"), sort_keys=False)
 
