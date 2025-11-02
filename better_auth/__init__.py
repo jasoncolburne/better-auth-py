@@ -24,14 +24,17 @@ from better_auth.api import (
     BetterAuthServerConfig,
 )
 from better_auth.exceptions import (
-    AuthenticationError,
     BetterAuthError,
-    EncodingError,
     ExpiredTokenError,
+    FutureRequestError,
+    FutureTokenError,
+    IncorrectNonceError,
+    InvalidDeviceError,
+    InvalidHashError,
+    InvalidIdentityError,
     InvalidMessageError,
-    InvalidNonceError,
-    StorageError,
-    VerificationError,
+    MismatchedIdentitiesError,
+    StaleRequestError,
 )
 
 __version__ = "0.1.0"
@@ -43,13 +46,16 @@ __all__ = [
     "AccessVerifier",
     "BetterAuthClientConfig",
     "BetterAuthServerConfig",
-    # Exceptions
+    # Exceptions - All 10 kept error types
     "BetterAuthError",
-    "VerificationError",
-    "StorageError",
-    "EncodingError",
-    "AuthenticationError",
     "InvalidMessageError",
+    "InvalidIdentityError",
+    "InvalidDeviceError",
+    "InvalidHashError",
+    "IncorrectNonceError",
+    "MismatchedIdentitiesError",
     "ExpiredTokenError",
-    "InvalidNonceError",
+    "FutureTokenError",
+    "StaleRequestError",
+    "FutureRequestError",
 ]
