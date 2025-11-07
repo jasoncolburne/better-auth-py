@@ -1,0 +1,19 @@
+# Python virtual environments
+venv
+.venv
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.mypy_cache
+
+# Build artifacts
+dist
+build
+*.egg-info
+
+# Logs
+*.log
+
+# OS
+.DS_Store
